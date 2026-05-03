@@ -160,8 +160,8 @@ export function ClickerModel({
             <RoundedBox
               position={[x, keycapCenterY, 0]}
               args={[KEYCAP_W, KEYCAP_H, KEYCAP_D]}
-              radius={0.07}
-              smoothness={4}
+              radius={0.12}
+              smoothness={6}
               castShadow
               receiveShadow
               onClick={(e) => {
