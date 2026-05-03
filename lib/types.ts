@@ -1,10 +1,10 @@
 export type FontId = "baloo2" | "fredoka" | "bungee" | "pressstart2p";
 
-export const FONTS: { id: FontId; label: string; ttf: string; json: string; sizeScale: number }[] = [
-  { id: "baloo2", label: "Baloo 2", ttf: "/fonts/baloo2.woff", json: "/fonts/baloo2.json", sizeScale: 1.0 },
-  { id: "fredoka", label: "Fredoka", ttf: "/fonts/fredoka.woff", json: "/fonts/fredoka.json", sizeScale: 1.0 },
-  { id: "bungee", label: "Bungee", ttf: "/fonts/bungee.woff", json: "/fonts/bungee.json", sizeScale: 1.0 },
-  { id: "pressstart2p", label: "Press Start 2P", ttf: "/fonts/pressstart2p.woff", json: "/fonts/pressstart2p.json", sizeScale: 0.75 },
+export const FONTS: { id: FontId; label: string; ttf: string; sizeScale: number }[] = [
+  { id: "baloo2", label: "Baloo 2", ttf: "/fonts/baloo2.woff", sizeScale: 1.0 },
+  { id: "fredoka", label: "Fredoka", ttf: "/fonts/fredoka.woff", sizeScale: 1.0 },
+  { id: "bungee", label: "Bungee", ttf: "/fonts/bungee.woff", sizeScale: 1.0 },
+  { id: "pressstart2p", label: "Press Start 2P", ttf: "/fonts/pressstart2p.woff", sizeScale: 0.75 },
 ];
 
 export type Keycap = {
