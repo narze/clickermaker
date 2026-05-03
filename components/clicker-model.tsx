@@ -16,14 +16,19 @@ const FRAME_INSET_H = 0.04;
 const LANYARD_W = 0.62;
 const LANYARD_GAP = 0.04;
 
+// Base size targets ~70% of KEYCAP_W (0.92). sizeScale adjusts per-font optical size.
+const BASE_FONT_SIZE = 0.65;
+
 function CenteredLetter({
   position,
   fontUrl,
+  sizeScale,
   char,
   color,
 }: {
   position: [number, number, number];
   fontUrl: string;
+  sizeScale: number;
   char: string;
   color: string;
 }) {
@@ -32,7 +37,7 @@ function CenteredLetter({
       position={position}
       rotation={[-Math.PI / 2, 0, 0]}
       font={fontUrl}
-      fontSize={0.6}
+      fontSize={BASE_FONT_SIZE * sizeScale}
       anchorX="center"
       anchorY="middle"
       color={color}
@@ -63,10 +68,10 @@ export function ClickerModel({
 }) {
   const n = design.keycaps.length;
   const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
-  const fontUrl = useMemo(
-    () => FONTS.find((f) => f.id === design.font)?.ttf ?? FONTS[0].ttf,
-    [design.font],
-  );
+  const { fontUrl, sizeScale } = useMemo(() => {
+    const f = FONTS.find((f) => f.id === design.font) ?? FONTS[0];
+    return { fontUrl: f.ttf, sizeScale: f.sizeScale };
+  }, [design.font]);
   const frameColor = useMemo(() => darken(design.baseColor, 0.18), [design.baseColor]);
   const lanyardX = -baseWidth / 2 - LANYARD_W / 2 - LANYARD_GAP;
 
@@ -169,6 +174,7 @@ export function ClickerModel({
                 <CenteredLetter
                   position={[x, keycapTopY + 0.001, 0]}
                   fontUrl={fontUrl}
+                  sizeScale={sizeScale}
                   char={kc.char}
                   color={kc.letterColor}
                 />
