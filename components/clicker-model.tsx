@@ -1,6 +1,6 @@
 "use client";
-import { RoundedBox, Text } from "@react-three/drei";
-import { Suspense, useEffect, useMemo } from "react";
+import { RoundedBox } from "@react-three/drei";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import type { Design } from "@/lib/types";
 import { FONTS } from "@/lib/types";
@@ -18,6 +18,23 @@ const LANYARD_GAP = 0.04;
 
 // Base size targets ~70% of KEYCAP_W (0.92). sizeScale adjusts per-font optical size.
 const BASE_FONT_SIZE = 0.65;
+// ~2mm real-world extrusion height
+const LETTER_DEPTH = 0.097;
+
+const fontCache = new Map<string, Promise<any>>();
+
+async function loadFont(url: string) {
+  if (!fontCache.has(url)) {
+    const promise = (async () => {
+      const opentype = await import("opentype.js");
+      const res = await fetch(url);
+      const buffer = await res.arrayBuffer();
+      return opentype.parse(buffer);
+    })();
+    fontCache.set(url, promise);
+  }
+  return fontCache.get(url)!;
+}
 
 // XDA profile: top face is ~75% of base width (real ≈ 13.9mm / 18.5mm)
 const XDA_TOP_SCALE = 0.75;
@@ -75,7 +92,7 @@ function createXdaGeometry(w: number, d: number, h: number, topScale: number, co
   return geo;
 }
 
-function CenteredLetter({
+function ExtrudedLetter({
   position,
   fontUrl,
   sizeScale,
@@ -88,19 +105,93 @@ function CenteredLetter({
   char: string;
   color: string;
 }) {
+  const [geometry, setGeometry] = useState<THREE.ExtrudeGeometry | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let pendingGeo: THREE.ExtrudeGeometry | null = null;
+
+    async function build() {
+      try {
+        const font = await loadFont(fontUrl);
+        if (cancelled) return;
+
+        const size = BASE_FONT_SIZE * sizeScale;
+        const glyph = font.charToGlyph(char);
+        const path = glyph.getPath(0, 0, size);
+
+        const shapePath = new THREE.ShapePath();
+        for (const cmd of path.commands) {
+          switch (cmd.type) {
+            case "M":
+              shapePath.moveTo(cmd.x, -cmd.y);
+              break;
+            case "L":
+              shapePath.lineTo(cmd.x, -cmd.y);
+              break;
+            case "Q":
+              shapePath.quadraticCurveTo(cmd.x1, -cmd.y1, cmd.x, -cmd.y);
+              break;
+            case "C":
+              shapePath.bezierCurveTo(cmd.x1, -cmd.y1, cmd.x2, -cmd.y2, cmd.x, -cmd.y);
+              break;
+            case "Z":
+              if (shapePath.currentPath) {
+                shapePath.currentPath.closePath();
+              }
+              break;
+          }
+        }
+
+        const shapes = shapePath.toShapes(false);
+        pendingGeo = new THREE.ExtrudeGeometry(shapes, {
+          depth: LETTER_DEPTH,
+          curveSegments: 32,
+          bevelEnabled: true,
+          bevelThickness: 0.008,
+          bevelSize: 0.008,
+          bevelSegments: 4,
+        });
+
+        pendingGeo.computeBoundingBox();
+        const bb = pendingGeo.boundingBox!;
+        pendingGeo.translate(-(bb.min.x + bb.max.x) / 2, -(bb.min.y + bb.max.y) / 2, 0);
+
+        if (!cancelled) {
+          setGeometry(pendingGeo);
+        }
+      } catch (err) {
+        console.error("Failed to build letter geometry:", err);
+      }
+    }
+
+    build();
+
+    return () => {
+      cancelled = true;
+      if (pendingGeo) {
+        pendingGeo.dispose();
+      }
+    };
+  }, [fontUrl, sizeScale, char]);
+
+  useEffect(() => {
+    return () => {
+      geometry?.dispose();
+    };
+  }, [geometry]);
+
+  if (!geometry) return null;
+
   return (
-    <Text
+    <mesh
       position={position}
       rotation={[-Math.PI / 2, 0, 0]}
-      font={fontUrl}
-      fontSize={BASE_FONT_SIZE * sizeScale}
-      anchorX="center"
-      anchorY="middle"
-      color={color}
-      material-toneMapped={false}
+      geometry={geometry}
+      castShadow
     >
-      {char}
-    </Text>
+      <meshStandardMaterial color={color} roughness={0.4} metalness={0.05} toneMapped={false} />
+    </mesh>
   );
 }
 
@@ -231,8 +322,8 @@ export function ClickerModel({
 
             {kc.char && (
               <Suspense fallback={null}>
-                <CenteredLetter
-                  position={[x, keycapTopY + 0.001, 0]}
+                <ExtrudedLetter
+                  position={[x, keycapTopY, 0]}
                   fontUrl={fontUrl}
                   sizeScale={sizeScale}
                   char={kc.char}
