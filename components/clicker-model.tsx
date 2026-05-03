@@ -24,6 +24,62 @@ const BASE_FONT_SIZE = 0.65;
 // KEYCAP_W=0.92 ≈ 19mm → 1 unit ≈ 20.6mm → 2mm ≈ 0.097 world units
 const LETTER_DEPTH = 0.097;
 
+// XDA profile: top face is ~75% of base width (real ≈ 13.9mm / 18.5mm)
+const XDA_TOP_SCALE = 0.75;
+const XDA_CORNER_R = 0.06; // corner radius on the top face
+
+/**
+ * Tapered rounded-box for XDA keycap profile.
+ * Shape is a rounded rect in XY plane, extruded along +Z, then rotated
+ * so the flat top faces +Y. Vertices are linearly interpolated: top stays
+ * at topW, bottom expands to w, giving the characteristic taper.
+ */
+function createXdaGeometry(w: number, d: number, h: number, topScale: number, cornerR: number): THREE.BufferGeometry {
+  const topW = w * topScale;
+  const topD = d * topScale;
+  const halfH = h / 2;
+  const r = Math.min(cornerR, topW / 2, topD / 2);
+  const hw = topW / 2, hd = topD / 2;
+
+  const shape = new THREE.Shape();
+  shape.moveTo(-hw + r, -hd);
+  shape.lineTo(hw - r, -hd);
+  shape.quadraticCurveTo(hw, -hd, hw, -hd + r);
+  shape.lineTo(hw, hd - r);
+  shape.quadraticCurveTo(hw, hd, hw - r, hd);
+  shape.lineTo(-hw + r, hd);
+  shape.quadraticCurveTo(-hw, hd, -hw, hd - r);
+  shape.lineTo(-hw, -hd + r);
+  shape.quadraticCurveTo(-hw, -hd, -hw + r, -hd);
+  shape.closePath();
+
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: h,
+    bevelEnabled: false,
+    steps: 1,
+    curveSegments: 8,
+  });
+
+  // rotateX(+π/2): (x,y,z) → (x,-z,y) — shape XY becomes XZ, top at y=0
+  geo.rotateX(Math.PI / 2);
+  // center vertically: top at +halfH, bottom at -halfH
+  geo.translate(0, halfH, 0);
+
+  // Linear taper: top stays topW, bottom expands to w
+  const scaleFactor = w / topW;
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    const t = (halfH - y) / h; // 0 at top, 1 at bottom
+    const s = 1 + (scaleFactor - 1) * t;
+    pos.setX(i, pos.getX(i) * s);
+    pos.setZ(i, pos.getZ(i) * s);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
 function EmbossedLetter({
   position,
   fontJsonUrl,
@@ -94,6 +150,12 @@ export function ClickerModel({
     const f = FONTS.find((f) => f.id === design.font) ?? FONTS[0];
     return { fontJsonUrl: f.json, sizeScale: f.sizeScale };
   }, [design.font]);
+
+  const keycapGeo = useMemo(
+    () => createXdaGeometry(KEYCAP_W, KEYCAP_D, KEYCAP_H, XDA_TOP_SCALE, XDA_CORNER_R),
+    []
+  );
+  useEffect(() => () => keycapGeo.dispose(), [keycapGeo]);
   const frameColor = useMemo(() => darken(design.baseColor, 0.18), [design.baseColor]);
   const lanyardX = -baseWidth / 2 - LANYARD_W / 2 - LANYARD_GAP;
 
@@ -157,11 +219,9 @@ export function ClickerModel({
 
         return (
           <group key={i}>
-            <RoundedBox
+            <mesh
               position={[x, keycapCenterY, 0]}
-              args={[KEYCAP_W, KEYCAP_H, KEYCAP_D]}
-              radius={0.12}
-              smoothness={6}
+              geometry={keycapGeo}
               castShadow
               receiveShadow
               onClick={(e) => {
@@ -187,7 +247,7 @@ export function ClickerModel({
                 emissive={isHighlighted ? "#ffffff" : "#000000"}
                 emissiveIntensity={isHighlighted ? 0.12 : 0}
               />
-            </RoundedBox>
+            </mesh>
 
             {kc.char && (
               <Suspense fallback={null}>
