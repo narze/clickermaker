@@ -1,7 +1,10 @@
 "use client";
-import { RoundedBox, Text } from "@react-three/drei";
-import { Suspense, useMemo } from "react";
+import { RoundedBox } from "@react-three/drei";
+import { useLoader } from "@react-three/fiber";
+import { Suspense, useEffect, useMemo } from "react";
 import * as THREE from "three";
+import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
+import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
 import type { Design } from "@/lib/types";
 import { FONTS } from "@/lib/types";
 
@@ -16,35 +19,54 @@ const FRAME_INSET_H = 0.04;
 const LANYARD_W = 0.62;
 const LANYARD_GAP = 0.04;
 
-// Base size targets ~70% of KEYCAP_W (0.92). sizeScale adjusts per-font optical size.
+// ~70% of KEYCAP_W; each font has a sizeScale multiplier for optical corrections.
 const BASE_FONT_SIZE = 0.65;
+// KEYCAP_W=0.92 ≈ 19mm → 1 unit ≈ 20.6mm → 2mm ≈ 0.097 world units
+const LETTER_DEPTH = 0.097;
 
-function CenteredLetter({
+function EmbossedLetter({
   position,
-  fontUrl,
+  fontJsonUrl,
   sizeScale,
   char,
   color,
 }: {
   position: [number, number, number];
-  fontUrl: string;
+  fontJsonUrl: string;
   sizeScale: number;
   char: string;
   color: string;
 }) {
+  const font = useLoader(FontLoader, fontJsonUrl);
+
+  const geometry = useMemo(() => {
+    const size = BASE_FONT_SIZE * sizeScale;
+    const geo = new TextGeometry(char, {
+      font,
+      size,
+      depth: LETTER_DEPTH,
+      curveSegments: 12,
+      bevelEnabled: false,
+    });
+    geo.computeBoundingBox();
+    const bb = geo.boundingBox!;
+    const cx = (bb.min.x + bb.max.x) / 2;
+    const cy = (bb.min.y + bb.max.y) / 2;
+    geo.translate(-cx, -cy, 0);
+    return geo;
+  }, [font, char, sizeScale]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
   return (
-    <Text
+    <mesh
       position={position}
       rotation={[-Math.PI / 2, 0, 0]}
-      font={fontUrl}
-      fontSize={BASE_FONT_SIZE * sizeScale}
-      anchorX="center"
-      anchorY="middle"
-      color={color}
-      material-toneMapped={false}
+      geometry={geometry}
+      castShadow
     >
-      {char}
-    </Text>
+      <meshStandardMaterial color={color} roughness={0.4} metalness={0.05} toneMapped={false} />
+    </mesh>
   );
 }
 
@@ -68,9 +90,9 @@ export function ClickerModel({
 }) {
   const n = design.keycaps.length;
   const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
-  const { fontUrl, sizeScale } = useMemo(() => {
+  const { fontJsonUrl, sizeScale } = useMemo(() => {
     const f = FONTS.find((f) => f.id === design.font) ?? FONTS[0];
-    return { fontUrl: f.ttf, sizeScale: f.sizeScale };
+    return { fontJsonUrl: f.json, sizeScale: f.sizeScale };
   }, [design.font]);
   const frameColor = useMemo(() => darken(design.baseColor, 0.18), [design.baseColor]);
   const lanyardX = -baseWidth / 2 - LANYARD_W / 2 - LANYARD_GAP;
@@ -88,7 +110,6 @@ export function ClickerModel({
         >
           <meshStandardMaterial color={design.baseColor} roughness={0.62} metalness={0.04} />
         </RoundedBox>
-        {/* lanyard hole — render a darker disc + ring on top + bottom */}
         <mesh position={[0, BASE_H / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.08, 0.16, 32]} />
           <meshStandardMaterial color={frameColor} roughness={0.7} side={THREE.DoubleSide} />
@@ -97,7 +118,6 @@ export function ClickerModel({
           <ringGeometry args={[0.08, 0.16, 32]} />
           <meshStandardMaterial color={frameColor} roughness={0.7} side={THREE.DoubleSide} />
         </mesh>
-        {/* hole center */}
         <mesh position={[0, BASE_H / 2 + 0.0005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[0.08, 24]} />
           <meshStandardMaterial color="#1d1d1d" roughness={0.9} side={THREE.DoubleSide} />
@@ -116,7 +136,7 @@ export function ClickerModel({
         <meshStandardMaterial color={design.baseColor} roughness={0.6} metalness={0.04} />
       </RoundedBox>
 
-      {/* Inset frame area where keycaps sit (slightly darker plate on top of base) */}
+      {/* Inset frame */}
       <RoundedBox
         position={[0, BASE_H + FRAME_INSET_H / 2, 0]}
         args={[baseWidth - 0.16, FRAME_INSET_H, BASE_DEPTH - 0.16]}
@@ -127,7 +147,7 @@ export function ClickerModel({
         <meshStandardMaterial color={frameColor} roughness={0.75} metalness={0.04} />
       </RoundedBox>
 
-      {/* Keycaps + letters */}
+      {/* Keycaps + embossed letters */}
       {design.keycaps.map((kc, i) => {
         const x = (i - (n - 1) / 2) * KEYCAP_SPACING;
         const keycapBottomY = BASE_H + FRAME_INSET_H;
@@ -171,9 +191,9 @@ export function ClickerModel({
 
             {kc.char && (
               <Suspense fallback={null}>
-                <CenteredLetter
-                  position={[x, keycapTopY + 0.001, 0]}
-                  fontUrl={fontUrl}
+                <EmbossedLetter
+                  position={[x, keycapTopY, 0]}
+                  fontJsonUrl={fontJsonUrl}
                   sizeScale={sizeScale}
                   char={kc.char}
                   color={kc.letterColor}
