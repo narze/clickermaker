@@ -4,24 +4,30 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import type { Design } from "@/lib/types";
 import { FONTS } from "@/lib/types";
+import type { Font } from "opentype.js";
 
-const KEYCAP_W = 0.92;
-const KEYCAP_D = 0.92;
-const KEYCAP_H = 0.46;
-const KEYCAP_SPACING = 1.04;
-const BASE_H = 0.5;
-const BASE_DEPTH = 1.5;
-const BASE_PAD = 0.34;
-const FRAME_INSET_H = 0.04;
-const LANYARD_W = 0.62;
-const LANYARD_GAP = 0.04;
+const KEYCAP_W = 0.88;
+const KEYCAP_D = 0.88;
+const KEYCAP_H = 0.62;
+const KEYCAP_SPACING = 0.94;
+const BASE_DEPTH = 1.22;
+const BASE_PAD = 0.22;
+const FLOOR_H = 0.2;
+const WALL_H = 0.24;
+const WALL_T = 0.1;
+const DIVIDER_T = 0.11;
+const INNER_INSET = 0.12;
+const LANYARD_RING_R = 0.23;
+const LANYARD_HOLE_R = 0.085;
+const LANYARD_STEM_W = 0.19;
+const LETTER_Y_INSET = 0.04;
 
 // Base size targets ~70% of KEYCAP_W (0.92). sizeScale adjusts per-font optical size.
 const BASE_FONT_SIZE = 0.65;
 // ~2mm real-world extrusion height
 const LETTER_DEPTH = 0.097;
 
-const fontCache = new Map<string, Promise<any>>();
+const fontCache = new Map<string, Promise<Font>>();
 
 async function loadFont(url: string) {
   if (!fontCache.has(url)) {
@@ -36,22 +42,26 @@ async function loadFont(url: string) {
   return fontCache.get(url)!;
 }
 
-// XDA profile: top face is ~75% of base width (real ≈ 13.9mm / 18.5mm)
-const XDA_TOP_SCALE = 0.75;
-const XDA_CORNER_R = 0.06; // corner radius on the top face
+const PLUNGER_TOP_SCALE = 0.82;
+const PLUNGER_CORNER_R = 0.16;
 
 /**
- * Tapered rounded-box for XDA keycap profile.
- * Shape is a rounded rect in XY plane, extruded along +Z, then rotated
- * so the flat top faces +Y. Vertices are linearly interpolated: top stays
- * at topW, bottom expands to w, giving the characteristic taper.
+ * Tapered rounded rect used for the physical clicker plungers.
+ * The top stays smaller than the base and a small bevel softens the top edge.
  */
-function createXdaGeometry(w: number, d: number, h: number, topScale: number, cornerR: number): THREE.BufferGeometry {
+function createPlungerGeometry(
+  w: number,
+  d: number,
+  h: number,
+  topScale: number,
+  cornerR: number,
+): THREE.BufferGeometry {
   const topW = w * topScale;
   const topD = d * topScale;
   const halfH = h / 2;
   const r = Math.min(cornerR, topW / 2, topD / 2);
-  const hw = topW / 2, hd = topD / 2;
+  const hw = topW / 2;
+  const hd = topD / 2;
 
   const shape = new THREE.Shape();
   shape.moveTo(-hw + r, -hd);
@@ -67,22 +77,22 @@ function createXdaGeometry(w: number, d: number, h: number, topScale: number, co
 
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth: h,
-    bevelEnabled: false,
+    bevelEnabled: true,
+    bevelThickness: 0.018,
+    bevelSize: 0.02,
+    bevelSegments: 5,
     steps: 1,
-    curveSegments: 8,
+    curveSegments: 18,
   });
 
-  // rotateX(+π/2): (x,y,z) → (x,-z,y) — shape XY becomes XZ, top at y=0
   geo.rotateX(Math.PI / 2);
-  // center vertically: top at +halfH, bottom at -halfH
   geo.translate(0, halfH, 0);
 
-  // Linear taper: top stays topW, bottom expands to w
   const scaleFactor = w / topW;
   const pos = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
     const y = pos.getY(i);
-    const t = (halfH - y) / h; // 0 at top, 1 at bottom
+    const t = (halfH - y) / h;
     const s = 1 + (scaleFactor - 1) * t;
     pos.setX(i, pos.getX(i) * s);
     pos.setZ(i, pos.getZ(i) * s);
@@ -204,6 +214,14 @@ function darken(hex: string, amount = 0.18): string {
   return `#${c.getHexString()}`;
 }
 
+function BasePlastic({ color }: { color: string }) {
+  return <meshStandardMaterial color={color} roughness={0.68} metalness={0.03} />;
+}
+
+function FramePlastic({ color }: { color: string }) {
+  return <meshStandardMaterial color={color} roughness={0.76} metalness={0.02} />;
+}
+
 export function ClickerModel({
   design,
   onKeycapClick,
@@ -215,77 +233,98 @@ export function ClickerModel({
 }) {
   const n = design.keycaps.length;
   const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
+  const baseHeight = FLOOR_H + WALL_H;
+  const trayTopY = baseHeight;
+  const keycapBottomY = FLOOR_H;
+  const keycapCenterY = keycapBottomY + KEYCAP_H / 2;
+  const keycapTopY = keycapBottomY + KEYCAP_H;
   const { fontUrl, sizeScale } = useMemo(() => {
     const f = FONTS.find((f) => f.id === design.font) ?? FONTS[0];
     return { fontUrl: f.ttf, sizeScale: f.sizeScale };
   }, [design.font]);
 
-  const keycapGeo = useMemo(
-    () => createXdaGeometry(KEYCAP_W, KEYCAP_D, KEYCAP_H, XDA_TOP_SCALE, XDA_CORNER_R),
-    []
-  );
+  const keycapGeo = useMemo(() => createPlungerGeometry(KEYCAP_W, KEYCAP_D, KEYCAP_H, PLUNGER_TOP_SCALE, PLUNGER_CORNER_R), []);
   useEffect(() => () => keycapGeo.dispose(), [keycapGeo]);
   const frameColor = useMemo(() => darken(design.baseColor, 0.18), [design.baseColor]);
-  const lanyardX = -baseWidth / 2 - LANYARD_W / 2 - LANYARD_GAP;
+  const lanyardX = -baseWidth / 2 - LANYARD_RING_R * 0.4;
+  const sideWallZ = BASE_DEPTH / 2 - WALL_T / 2;
+  const dividerY = FLOOR_H + WALL_H / 2;
+  const buttonTravel = Math.max(0, KEYCAP_H - WALL_H);
 
   return (
-    <group position={[0, -BASE_H / 2, 0]}>
-      {/* Lanyard tab */}
-      <group position={[lanyardX, BASE_H / 2, 0]}>
-        <RoundedBox
-          args={[LANYARD_W, BASE_H, BASE_DEPTH * 0.62]}
-          radius={0.18}
-          smoothness={4}
-          castShadow
-          receiveShadow
-        >
-          <meshStandardMaterial color={design.baseColor} roughness={0.62} metalness={0.04} />
-        </RoundedBox>
-        {/* lanyard hole — render a darker disc + ring on top + bottom */}
-        <mesh position={[0, BASE_H / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.08, 0.16, 32]} />
-          <meshStandardMaterial color={frameColor} roughness={0.7} side={THREE.DoubleSide} />
-        </mesh>
-        <mesh position={[0, -BASE_H / 2 - 0.001, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.08, 0.16, 32]} />
-          <meshStandardMaterial color={frameColor} roughness={0.7} side={THREE.DoubleSide} />
-        </mesh>
-        {/* hole center */}
-        <mesh position={[0, BASE_H / 2 + 0.0005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.08, 24]} />
-          <meshStandardMaterial color="#1d1d1d" roughness={0.9} side={THREE.DoubleSide} />
-        </mesh>
-      </group>
-
-      {/* Base body */}
+    <group position={[0, -baseHeight / 2, 0]}>
+      {/* Single-piece housing */}
       <RoundedBox
-        position={[0, BASE_H / 2, 0]}
-        args={[baseWidth, BASE_H, BASE_DEPTH]}
-        radius={0.16}
+        position={[0, baseHeight / 2, 0]}
+        args={[baseWidth, baseHeight, BASE_DEPTH]}
+        radius={0.1}
+        smoothness={5}
+        castShadow
+        receiveShadow
+      >
+        <BasePlastic color={design.baseColor} />
+      </RoundedBox>
+
+      {/* Lanyard loop */}
+      <mesh
+        position={[lanyardX, baseHeight / 2, 0]}
+        rotation={[Math.PI / 2, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <torusGeometry
+          args={[
+            (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
+            (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
+            20,
+            40,
+          ]}
+        />
+        <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
+      </mesh>
+      <RoundedBox
+        position={[lanyardX + LANYARD_RING_R * 0.58, baseHeight / 2, 0]}
+        args={[LANYARD_STEM_W, 0.12, 0.32]}
+        radius={0.04}
         smoothness={4}
         castShadow
         receiveShadow
       >
-        <meshStandardMaterial color={design.baseColor} roughness={0.6} metalness={0.04} />
+        <BasePlastic color={design.baseColor} />
       </RoundedBox>
 
-      {/* Inset frame area where keycaps sit (slightly darker plate on top of base) */}
+      {/* Tray floor tint */}
       <RoundedBox
-        position={[0, BASE_H + FRAME_INSET_H / 2, 0]}
-        args={[baseWidth - 0.16, FRAME_INSET_H, BASE_DEPTH - 0.16]}
-        radius={0.05}
+        position={[0, FLOOR_H + 0.012, 0]}
+        args={[baseWidth - INNER_INSET * 2, 0.024, BASE_DEPTH - INNER_INSET * 2]}
+        radius={0.04}
         smoothness={4}
         receiveShadow
       >
-        <meshStandardMaterial color={frameColor} roughness={0.75} metalness={0.04} />
+        <FramePlastic color={frameColor} />
       </RoundedBox>
+
+      {/* Dividers */}
+      {Array.from({ length: Math.max(0, n - 1) }).map((_, i) => {
+        const dividerX = (i - (n - 2) / 2) * KEYCAP_SPACING + KEYCAP_SPACING / 2;
+        return (
+          <RoundedBox
+            key={`divider-${i}`}
+            position={[dividerX, dividerY, 0]}
+            args={[DIVIDER_T, WALL_H, BASE_DEPTH - INNER_INSET * 2.1]}
+            radius={0.05}
+            smoothness={4}
+            castShadow
+            receiveShadow
+          >
+            <BasePlastic color={design.baseColor} />
+          </RoundedBox>
+        );
+      })}
 
       {/* Keycaps + letters */}
       {design.keycaps.map((kc, i) => {
         const x = (i - (n - 1) / 2) * KEYCAP_SPACING;
-        const keycapBottomY = BASE_H + FRAME_INSET_H;
-        const keycapCenterY = keycapBottomY + KEYCAP_H / 2;
-        const keycapTopY = keycapBottomY + KEYCAP_H;
         const isHighlighted = highlightedIndex === i;
 
         return (
@@ -313,17 +352,17 @@ export function ClickerModel({
             >
               <meshStandardMaterial
                 color={kc.keycapColor}
-                roughness={0.5}
-                metalness={0.05}
+                roughness={0.56}
+                metalness={0.04}
                 emissive={isHighlighted ? "#ffffff" : "#000000"}
-                emissiveIntensity={isHighlighted ? 0.12 : 0}
+                emissiveIntensity={isHighlighted ? 0.08 : 0}
               />
             </mesh>
 
             {kc.char && (
               <Suspense fallback={null}>
                 <ExtrudedLetter
-                  position={[x, keycapTopY, 0]}
+                  position={[x, keycapTopY - LETTER_Y_INSET * 0.65, 0]}
                   fontUrl={fontUrl}
                   sizeScale={sizeScale}
                   char={kc.char}
@@ -331,6 +370,12 @@ export function ClickerModel({
                 />
               </Suspense>
             )}
+
+            {/* Exposed plunger travel area below the tray line */}
+            <mesh position={[x, FLOOR_H + buttonTravel / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[KEYCAP_W * 0.7, buttonTravel, KEYCAP_D * 0.7]} />
+              <meshStandardMaterial color={darken(kc.keycapColor, 0.16)} roughness={0.6} metalness={0.02} />
+            </mesh>
           </group>
         );
       })}

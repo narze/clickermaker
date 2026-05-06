@@ -147,14 +147,12 @@ function CameraFit({ keycapCount }: { keycapCount: number }) {
     if (!(camera instanceof THREE.PerspectiveCamera)) return;
     const aspect = size.width / size.height;
     // Model geometry constants (must match clicker-model.tsx)
-    const KEYCAP_SPACING = 1.04;
-    const BASE_PAD = 0.34;
-    const LANYARD_W = 0.62;
-    const LANYARD_GAP = 0.04;
+    const KEYCAP_SPACING = 0.98;
+    const BASE_PAD = 0.22;
+    const LANYARD_RING_R = 0.18;
     const n = keycapCount;
     const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
-    // Use the wider (left) side: lanyard extends past base edge
-    const modelHalfWidth = baseWidth / 2 + LANYARD_W + LANYARD_GAP + 0.3;
+    const modelHalfWidth = baseWidth / 2 + LANYARD_RING_R * 0.75 + 0.28;
     // Effective camera depth to world origin (camera at [0, 3.5, 7])
     const camDepth = Math.sqrt(3.5 * 3.5 + 7 * 7);
     const minVFov = (2 * Math.atan(modelHalfWidth / (camDepth * aspect)) * 180) / Math.PI;
