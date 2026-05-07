@@ -31,7 +31,7 @@ export const DEFAULTS: Design = {
     { char: "M", keycapColor: "#ffffff", letterColor: "#e91e63" },
     { char: "E", keycapColor: "#ffffff", letterColor: "#e91e63" },
   ],
-  baseColor: "#f8a8c4",
+  baseColor: "#f2b5c8",
   font: "baloo2",
   defaultKeycapColor: "#ffffff",
   defaultLetterColor: "#e91e63",
