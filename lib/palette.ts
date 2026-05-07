@@ -1,22 +1,21 @@
+/** Swatches matched to physical PLA keycap filaments (pastel pink, yellow, cyan, white, mint, lavender). */
 export const BASE_PALETTE: { name: string; hex: string }[] = [
-  { name: "Bubble Pink", hex: "#f8a8c4" },
-  { name: "Sky Blue", hex: "#a8d5e8" },
-  { name: "Mint", hex: "#b8e6c1" },
-  { name: "Peach", hex: "#f5c19c" },
-  { name: "Lilac", hex: "#d8b8e8" },
-  { name: "Butter", hex: "#f8e8a8" },
-  { name: "Cloud", hex: "#f5f5f5" },
+  { name: "Pastel Pink", hex: "#f2b5c8" },
+  { name: "Yellow", hex: "#ffe24a" },
+  { name: "Cyan", hex: "#2ec4e6" },
+  { name: "White", hex: "#ffffff" },
+  { name: "Mint", hex: "#b5e8c9" },
+  { name: "Lavender", hex: "#c5b3e8" },
   { name: "Charcoal", hex: "#2a2a2a" },
 ];
 
 export const KEYCAP_PALETTE: { name: string; hex: string }[] = [
+  { name: "Pastel Pink", hex: "#f2b5c8" },
+  { name: "Yellow", hex: "#ffe24a" },
+  { name: "Cyan", hex: "#2ec4e6" },
   { name: "White", hex: "#ffffff" },
-  { name: "Bubble", hex: "#f8a8c4" },
-  { name: "Sky", hex: "#a8d5e8" },
-  { name: "Mint", hex: "#b8e6c1" },
-  { name: "Peach", hex: "#f5c19c" },
-  { name: "Lilac", hex: "#d8b8e8" },
-  { name: "Butter", hex: "#f8e8a8" },
+  { name: "Mint", hex: "#b5e8c9" },
+  { name: "Lavender", hex: "#c5b3e8" },
   { name: "Charcoal", hex: "#2a2a2a" },
 ];
 
