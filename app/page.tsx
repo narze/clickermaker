@@ -1,7 +1,7 @@
-import { Designer } from "@/components/designer";
+import { Designer } from "@/components/designer"
 
 export default function Page() {
-  const shopUrl = process.env.NEXT_PUBLIC_SHOP_URL || "#";
+  const shopUrl = process.env.NEXT_PUBLIC_SHOP_URL || "#"
 
   return (
     <main className="flex min-h-screen flex-col items-center px-4 py-8 sm:px-6 lg:px-8">
@@ -13,8 +13,8 @@ export default function Page() {
           Clicker Maker
         </h1>
         <p className="mt-2 text-sm text-neutral-500 sm:text-base">
-          Design your own custom Click-ET! fidget toy. Type, pick colors, save
-          the image, then order it 3D-printed.
+          Design your own custom clicker fidget toy. Type, pick colors, save the
+          image, then order it 3D-printed.
         </p>
       </header>
 
@@ -31,5 +31,5 @@ export default function Page() {
         </a>
       </footer>
     </main>
-  );
+  )
 }

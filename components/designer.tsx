@@ -1,39 +1,39 @@
-"use client";
-import { useCallback, useRef, useState } from "react";
-import { useDesign } from "@/lib/use-design";
-import { ClickerScene, type ExportFn } from "./clicker-scene";
-import { ControlsPanel } from "./controls-panel";
+"use client"
+import { useCallback, useRef, useState } from "react"
+import { useDesign } from "@/lib/use-design"
+import { ClickerScene, type ExportFn } from "./clicker-scene"
+import { ControlsPanel } from "./controls-panel"
 
 export function Designer() {
-  const d = useDesign();
-  const exportRef = useRef<ExportFn | null>(null);
-  const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
-  const [idle, setIdle] = useState(false);
+  const d = useDesign()
+  const exportRef = useRef<ExportFn | null>(null)
+  const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null)
+  const [idle, setIdle] = useState(false)
 
-  const stopIdle = useCallback(() => setIdle(false), []);
+  const stopIdle = useCallback(() => setIdle(false), [])
 
   const onKeycapClick = useCallback((i: number) => {
-    setHighlightedIndex(i);
-    setIdle(false);
+    setHighlightedIndex(i)
+    setIdle(false)
     // Auto-clear highlight after a few seconds so it's not permanently stuck
     window.setTimeout(() => {
-      setHighlightedIndex((cur) => (cur === i ? null : cur));
-    }, 2400);
-  }, []);
+      setHighlightedIndex((cur) => (cur === i ? null : cur))
+    }, 2400)
+  }, [])
 
   const onSaveImage = useCallback(() => {
-    const fn = exportRef.current;
-    if (!fn) return;
-    const url = fn();
-    if (!url) return;
-    const word = d.word.replace(/[^A-Z0-9]/gi, "") || "click-et";
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `clicker-${word.toLowerCase()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }, [d.word]);
+    const fn = exportRef.current
+    if (!fn) return
+    const url = fn()
+    if (!url) return
+    const word = d.word.replace(/[^A-Z0-9]/gi, "") || "geekcraft"
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `clicker-${word.toLowerCase()}.png`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  }, [d.word])
 
   return (
     <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[1fr_22rem]">
@@ -70,5 +70,5 @@ export function Designer() {
         onSaveImage={onSaveImage}
       />
     </div>
-  );
+  )
 }
