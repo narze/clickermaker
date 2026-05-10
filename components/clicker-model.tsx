@@ -16,6 +16,7 @@ import {
   getKeycapWaveDurationMs,
   KEYCAP_WAVE_PRESS_RATIO,
   sampleKeycapWavePress,
+  type WaveRequest,
 } from "@/lib/keycap-wave";
 import type { Design } from "@/lib/types";
 import { FONTS } from "@/lib/types";
@@ -58,6 +59,7 @@ async function loadFont(url: string) {
 
 const PLUNGER_TOP_SCALE = 0.82;
 const PLUNGER_CORNER_R = 0.16;
+const GLYPH_WAVE_FALLBACK_MS = 250;
 
 /**
  * Tapered rounded rect used for the physical clicker plungers.
@@ -122,12 +124,16 @@ function ExtrudedLetter({
   sizeScale,
   char,
   color,
+  readyKey,
+  onReady,
 }: {
   position: [number, number, number];
   fontUrl: string;
   sizeScale: number;
   char: string;
   color: string;
+  readyKey: string;
+  onReady?: (readyKey: string) => void;
 }) {
   const [geometry, setGeometry] = useState<THREE.ExtrudeGeometry | null>(null);
 
@@ -183,6 +189,7 @@ function ExtrudedLetter({
 
         if (!cancelled) {
           setGeometry(pendingGeo);
+          onReady?.(readyKey);
         }
       } catch (err) {
         console.error("Failed to build letter geometry:", err);
@@ -197,7 +204,7 @@ function ExtrudedLetter({
         pendingGeo.dispose();
       }
     };
-  }, [fontUrl, sizeScale, char]);
+  }, [char, fontUrl, onReady, readyKey, sizeScale]);
 
   useEffect(() => {
     return () => {
@@ -250,11 +257,11 @@ type ClickerModelProps = {
   design: Design;
   onKeycapClick?: (i: number) => void;
   highlightedIndex?: number | null;
-  waveToken: number;
+  waveRequest: WaveRequest;
 };
 
 export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
-  function ClickerModel({ design, onKeycapClick, highlightedIndex, waveToken }, ref) {
+  function ClickerModel({ design, onKeycapClick, highlightedIndex, waveRequest }, ref) {
     const n = design.keycaps.length;
     const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
     const baseHeight = FLOOR_H + WALL_H;
@@ -285,8 +292,19 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
     const buttonTravel = Math.max(0, KEYCAP_H - WALL_H);
     const capTravel = KEYCAP_H * KEYCAP_WAVE_PRESS_RATIO;
     const waveStartMsRef = useRef<number | null>(null);
+    const pendingWaveRef = useRef<WaveRequest | null>(null);
+    const pendingWaveDeadlineRef = useRef<number | null>(null);
     const movingKeyRefs = useRef<Array<THREE.Group | null>>([]);
     const shadowMaterialRefs = useRef<Array<THREE.MeshBasicMaterial | null>>([]);
+    const readyGlyphKeysRef = useRef<Set<string>>(new Set());
+
+    const expectedGlyphKeys = useMemo(
+      () =>
+        design.keycaps.flatMap((keycap, index) =>
+          keycap.char ? [`${index}:${fontUrl}:${sizeScale}:${keycap.char}`] : [],
+        ),
+      [design.keycaps, fontUrl, sizeScale],
+    );
 
     const applyRestPose = useCallback(() => {
       movingKeyRefs.current.forEach((node) => {
@@ -297,10 +315,56 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
       });
     }, []);
 
-    useEffect(() => {
-      if (waveToken <= 0) return;
+    const startWave = useCallback(() => {
+      pendingWaveRef.current = null;
+      pendingWaveDeadlineRef.current = null;
       waveStartMsRef.current = performance.now();
-    }, [waveToken]);
+      readyGlyphKeysRef.current = new Set(expectedGlyphKeys);
+    }, [expectedGlyphKeys]);
+
+    const tryStartPendingGlyphWave = useCallback(() => {
+      const pendingWave = pendingWaveRef.current;
+      if (!pendingWave?.awaitGlyphs) return;
+      const allReady = expectedGlyphKeys.every((key) => readyGlyphKeysRef.current.has(key));
+      if (allReady) {
+        startWave();
+      }
+    }, [expectedGlyphKeys, startWave]);
+
+    const onGlyphReady = useCallback(
+      (glyphKey: string) => {
+        readyGlyphKeysRef.current.add(glyphKey);
+        tryStartPendingGlyphWave();
+      },
+      [tryStartPendingGlyphWave],
+    );
+
+    useEffect(() => {
+      readyGlyphKeysRef.current = new Set(
+        Array.from(readyGlyphKeysRef.current).filter((key) => expectedGlyphKeys.includes(key)),
+      );
+    }, [expectedGlyphKeys]);
+
+    useEffect(() => {
+      if (waveRequest.id <= 0) return;
+
+      waveStartMsRef.current = null;
+      applyRestPose();
+
+      if (!waveRequest.awaitGlyphs || expectedGlyphKeys.length === 0) {
+        startWave();
+        return;
+      }
+
+      const allReady = expectedGlyphKeys.every((key) => readyGlyphKeysRef.current.has(key));
+      if (allReady) {
+        startWave();
+        return;
+      }
+
+      pendingWaveRef.current = waveRequest;
+      pendingWaveDeadlineRef.current = performance.now() + GLYPH_WAVE_FALLBACK_MS;
+    }, [applyRestPose, expectedGlyphKeys, startWave, waveRequest]);
 
     useEffect(() => {
       applyRestPose();
@@ -311,6 +375,8 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
       () => ({
         forceRest() {
           waveStartMsRef.current = null;
+          pendingWaveRef.current = null;
+          pendingWaveDeadlineRef.current = null;
           applyRestPose();
         },
       }),
@@ -318,6 +384,16 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
     );
 
     useFrame(() => {
+      const pendingWave = pendingWaveRef.current;
+      const pendingDeadline = pendingWaveDeadlineRef.current;
+      if (
+        pendingWave &&
+        pendingDeadline !== null &&
+        performance.now() >= pendingDeadline
+      ) {
+        startWave();
+      }
+
       const startMs = waveStartMsRef.current;
       if (startMs === null) {
         applyRestPose();
@@ -420,6 +496,7 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
         {design.keycaps.map((kc, i) => {
           const x = (i - (n - 1) / 2) * KEYCAP_SPACING;
           const isHighlighted = highlightedIndex === i;
+          const glyphKey = `${i}:${fontUrl}:${sizeScale}:${kc.char}`;
 
           return (
             <group key={i}>
@@ -483,6 +560,8 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
                       sizeScale={sizeScale}
                       char={kc.char}
                       color={kc.letterColor}
+                      readyKey={glyphKey}
+                      onReady={onGlyphReady}
                     />
                   </Suspense>
                 )}

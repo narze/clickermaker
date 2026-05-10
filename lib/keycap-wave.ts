@@ -1,5 +1,10 @@
 export const KEYCAP_WAVE_PRESS_RATIO = 0.2
 
+export type WaveRequest = {
+  id: number
+  awaitGlyphs: boolean
+}
+
 export const KEYCAP_WAVE_CONFIG = {
   pressMs: 140,
   releaseMs: 220,

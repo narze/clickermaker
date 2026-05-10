@@ -1,9 +1,12 @@
 "use client"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { WaveRequest } from "@/lib/keycap-wave"
 import { useDesign } from "@/lib/use-design"
 import { th } from "@/lib/i18n/th"
 import { ClickerScene, type ExportFn } from "./clicker-scene"
 import { ControlsPanel } from "./controls-panel"
+
+const WORD_WAVE_DEBOUNCE_MS = 150
 
 export function Designer() {
   const d = useDesign()
@@ -15,19 +18,43 @@ export function Designer() {
     reset,
     resetKeycap,
     setBaseColor,
+    setFont,
     setKeycapChar,
     setKeycapColor,
     setLetterColor,
+    setWord,
   } = d
   const exportRef = useRef<ExportFn | null>(null)
+  const pendingWordWaveRef = useRef<number | null>(null)
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null)
   const [idle, setIdle] = useState(false)
-  const [waveToken, setWaveToken] = useState(0)
+  const [waveRequest, setWaveRequest] = useState<WaveRequest>({ id: 0, awaitGlyphs: false })
 
   const stopIdle = useCallback(() => setIdle(false), [])
-  const triggerWave = useCallback(() => {
-    setWaveToken((current) => current + 1)
+  const clearPendingWordWave = useCallback(() => {
+    if (pendingWordWaveRef.current !== null) {
+      window.clearTimeout(pendingWordWaveRef.current)
+      pendingWordWaveRef.current = null
+    }
   }, [])
+  const triggerWave = useCallback(
+    (awaitGlyphs: boolean) => {
+      clearPendingWordWave()
+      setWaveRequest((current) => ({ id: current.id + 1, awaitGlyphs }))
+    },
+    [clearPendingWordWave],
+  )
+  const scheduleWordWave = useCallback(() => {
+    clearPendingWordWave()
+    pendingWordWaveRef.current = window.setTimeout(() => {
+      pendingWordWaveRef.current = null
+      setWaveRequest((current) => ({ id: current.id + 1, awaitGlyphs: true }))
+    }, WORD_WAVE_DEBOUNCE_MS)
+  }, [clearPendingWordWave])
+
+  useEffect(() => {
+    return () => clearPendingWordWave()
+  }, [clearPendingWordWave])
 
   const onKeycapClick = useCallback((i: number) => {
     setHighlightedIndex(i)
@@ -41,15 +68,23 @@ export function Designer() {
   const onSetBaseColor = useCallback(
     (color: string) => {
       setBaseColor(color)
-      triggerWave()
+      triggerWave(false)
     },
     [setBaseColor, triggerWave],
+  )
+
+  const onSetWord = useCallback(
+    (word: string) => {
+      setWord(word)
+      scheduleWordWave()
+    },
+    [scheduleWordWave, setWord],
   )
 
   const onSetKeycapChar = useCallback(
     (index: number, char: string) => {
       setKeycapChar(index, char)
-      triggerWave()
+      triggerWave(false)
     },
     [setKeycapChar, triggerWave],
   )
@@ -57,7 +92,7 @@ export function Designer() {
   const onSetKeycapColor = useCallback(
     (index: number, color: string) => {
       setKeycapColor(index, color)
-      triggerWave()
+      triggerWave(false)
     },
     [setKeycapColor, triggerWave],
   )
@@ -65,7 +100,7 @@ export function Designer() {
   const onSetLetterColor = useCallback(
     (index: number, color: string) => {
       setLetterColor(index, color)
-      triggerWave()
+      triggerWave(false)
     },
     [setLetterColor, triggerWave],
   )
@@ -73,35 +108,43 @@ export function Designer() {
   const onResetKeycap = useCallback(
     (index: number) => {
       resetKeycap(index)
-      triggerWave()
+      triggerWave(false)
     },
     [resetKeycap, triggerWave],
   )
 
   const onAddKeycap = useCallback(() => {
     addKeycap()
-    triggerWave()
+    triggerWave(false)
   }, [addKeycap, triggerWave])
 
   const onRemoveKeycap = useCallback(() => {
     removeKeycap()
-    triggerWave()
+    triggerWave(false)
   }, [removeKeycap, triggerWave])
 
   const onApplyDefaultsToAll = useCallback(() => {
     applyDefaultsToAll()
-    triggerWave()
+    triggerWave(false)
   }, [applyDefaultsToAll, triggerWave])
 
   const onRandomizeColors = useCallback(() => {
     randomizeColors()
-    triggerWave()
+    triggerWave(false)
   }, [randomizeColors, triggerWave])
 
   const onReset = useCallback(() => {
     reset()
-    triggerWave()
+    triggerWave(false)
   }, [reset, triggerWave])
+
+  const onSetFont = useCallback(
+    (font: Parameters<typeof setFont>[0]) => {
+      setFont(font)
+      triggerWave(true)
+    },
+    [setFont, triggerWave],
+  )
 
   const onSaveImage = useCallback(() => {
     const fn = exportRef.current
@@ -125,7 +168,7 @@ export function Designer() {
           exportRef={exportRef}
           onKeycapClick={onKeycapClick}
           highlightedIndex={highlightedIndex}
-          waveToken={waveToken}
+          waveRequest={waveRequest}
           idle={idle}
           onUserInteract={stopIdle}
         />
@@ -142,7 +185,7 @@ export function Designer() {
         design={d.design}
         word={d.word}
         highlightedIndex={highlightedIndex}
-        onSetWord={d.setWord}
+        onSetWord={onSetWord}
         onSetKeycapChar={onSetKeycapChar}
         onSetKeycapColor={onSetKeycapColor}
         onSetLetterColor={onSetLetterColor}
@@ -154,7 +197,7 @@ export function Designer() {
         onSetDefaultLetterColor={d.setDefaultLetterColor}
         onApplyDefaultsToAll={onApplyDefaultsToAll}
         onRandomizeColors={onRandomizeColors}
-        onSetFont={d.setFont}
+        onSetFont={onSetFont}
         onReset={onReset}
         onSaveImage={onSaveImage}
       />

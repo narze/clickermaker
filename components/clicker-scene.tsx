@@ -8,6 +8,7 @@ import {
 } from "@react-three/drei";
 import { Suspense, useEffect, useRef } from "react";
 import * as THREE from "three";
+import type { WaveRequest } from "@/lib/keycap-wave";
 import type { Design } from "@/lib/types";
 import { ClickerModel, type ClickerModelHandle } from "./clicker-model";
 
@@ -72,7 +73,7 @@ export function ClickerScene({
   onKeycapClick,
   highlightedIndex,
   exportRef,
-  waveToken,
+  waveRequest,
   idle,
   onUserInteract,
 }: {
@@ -80,7 +81,7 @@ export function ClickerScene({
   onKeycapClick?: (i: number) => void;
   highlightedIndex?: number | null;
   exportRef: React.MutableRefObject<ExportFn | null>;
-  waveToken: number;
+  waveRequest: WaveRequest;
   idle: boolean;
   onUserInteract: () => void;
 }) {
@@ -120,7 +121,7 @@ export function ClickerScene({
           design={design}
           onKeycapClick={onKeycapClick}
           highlightedIndex={highlightedIndex}
-          waveToken={waveToken}
+          waveRequest={waveRequest}
         />
         <ContactShadows
           position={[0, -0.001, 0]}
