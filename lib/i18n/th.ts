@@ -52,7 +52,7 @@ export const th = {
     white: "ขาว",
     mint: "เขียวมิ้นต์",
     lavender: "ม่วงลาเวนเดอร์",
-    charcoal: "เทาเข้ม",
+    black: "ดำ",
     hotPink: "ชมพูบานเย็น",
     cobalt: "น้ำเงินโคบอลต์",
     forest: "เขียวเข้ม",
