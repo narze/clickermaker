@@ -1,6 +1,6 @@
 "use client";
 import { RotateCcw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Keycap } from "@/lib/types";
 import { sanitizeChar } from "@/lib/types";
 import { KEYCAP_PALETTE, LETTER_PALETTE } from "@/lib/palette";
@@ -25,10 +25,8 @@ export function KeycapRow({
   onLetterColor: (c: string) => void;
   onReset: () => void;
 }) {
-  const [local, setLocal] = useState(keycap.char);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setLocal(keycap.char), [keycap.char]);
   useEffect(() => {
     if (highlighted && ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -48,10 +46,9 @@ export function KeycapRow({
       </div>
       <input
         type="text"
-        value={local}
+        value={keycap.char}
         onChange={(e) => {
           const v = sanitizeChar(e.target.value.slice(-1));
-          setLocal(v);
           onCharChange(v);
         }}
         onFocus={(e) => e.target.select()}

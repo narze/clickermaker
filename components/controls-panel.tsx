@@ -1,6 +1,5 @@
 "use client";
 import { Download, Minus, Plus, RefreshCw, Shuffle } from "lucide-react";
-import { useEffect, useState } from "react";
 import type { Design, FontId } from "@/lib/types";
 import { FONTS, MAX_KEYCAPS, MIN_KEYCAPS, sanitizeWord } from "@/lib/types";
 import { BASE_PALETTE, KEYCAP_PALETTE, LETTER_PALETTE, getPaletteColorName } from "@/lib/palette";
@@ -48,9 +47,6 @@ export function ControlsPanel({
   onReset: () => void;
   onSaveImage: () => void;
 }) {
-  const [localWord, setLocalWord] = useState(word);
-  useEffect(() => setLocalWord(word), [word]);
-
   const n = design.keycaps.length;
 
   return (
@@ -60,12 +56,11 @@ export function ControlsPanel({
         <div className="flex flex-col gap-2">
           <input
             type="text"
-            value={localWord}
+            value={word}
             placeholder={th.controls.typeWord}
             maxLength={MAX_KEYCAPS}
             onChange={(e) => {
               const v = sanitizeWord(e.target.value);
-              setLocalWord(v);
               onSetWord(v);
             }}
             className="w-full rounded-lg border-2 border-neutral-200 bg-white px-3 py-2 text-lg font-bold uppercase tracking-wider focus:border-pink-500 focus:outline-none"

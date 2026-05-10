@@ -7,11 +7,16 @@ import { ControlsPanel } from "./controls-panel"
 
 export function Designer() {
   const d = useDesign()
+  const { setBaseColor } = d
   const exportRef = useRef<ExportFn | null>(null)
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null)
   const [idle, setIdle] = useState(false)
+  const [waveToken, setWaveToken] = useState(0)
 
   const stopIdle = useCallback(() => setIdle(false), [])
+  const triggerWave = useCallback(() => {
+    setWaveToken((current) => current + 1)
+  }, [])
 
   const onKeycapClick = useCallback((i: number) => {
     setHighlightedIndex(i)
@@ -21,6 +26,14 @@ export function Designer() {
       setHighlightedIndex((cur) => (cur === i ? null : cur))
     }, 2400)
   }, [])
+
+  const onSetBaseColor = useCallback(
+    (color: string) => {
+      setBaseColor(color)
+      triggerWave()
+    },
+    [setBaseColor, triggerWave],
+  )
 
   const onSaveImage = useCallback(() => {
     const fn = exportRef.current
@@ -44,6 +57,7 @@ export function Designer() {
           exportRef={exportRef}
           onKeycapClick={onKeycapClick}
           highlightedIndex={highlightedIndex}
+          waveToken={waveToken}
           idle={idle}
           onUserInteract={stopIdle}
         />
@@ -67,7 +81,7 @@ export function Designer() {
         onResetKeycap={d.resetKeycap}
         onAddKeycap={d.addKeycap}
         onRemoveKeycap={d.removeKeycap}
-        onSetBaseColor={d.setBaseColor}
+        onSetBaseColor={onSetBaseColor}
         onSetDefaultKeycapColor={d.setDefaultKeycapColor}
         onSetDefaultLetterColor={d.setDefaultLetterColor}
         onApplyDefaultsToAll={d.applyDefaultsToAll}

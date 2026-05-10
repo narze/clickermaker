@@ -1,7 +1,22 @@
 "use client";
+import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  forwardRef,
+  Suspense,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import * as THREE from "three";
+import {
+  getKeycapWaveDurationMs,
+  KEYCAP_WAVE_PRESS_RATIO,
+  sampleKeycapWavePress,
+} from "@/lib/keycap-wave";
 import type { Design } from "@/lib/types";
 import { FONTS } from "@/lib/types";
 import type { Font } from "opentype.js";
@@ -14,7 +29,6 @@ const BASE_DEPTH = 1.22;
 const BASE_PAD = 0.22;
 const FLOOR_H = 0.2;
 const WALL_H = 0.24;
-const WALL_T = 0.1;
 const DIVIDER_T = 0.11;
 const INNER_INSET = 0.12;
 const LANYARD_RING_R = 0.23;
@@ -228,163 +242,267 @@ function FramePlastic({ color }: { color: string }) {
   return <meshStandardMaterial color={color} roughness={0.76} metalness={0.02} />;
 }
 
-export function ClickerModel({
-  design,
-  onKeycapClick,
-  highlightedIndex,
-}: {
+export type ClickerModelHandle = {
+  forceRest: () => void;
+};
+
+type ClickerModelProps = {
   design: Design;
   onKeycapClick?: (i: number) => void;
   highlightedIndex?: number | null;
-}) {
-  const n = design.keycaps.length;
-  const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
-  const baseHeight = FLOOR_H + WALL_H;
-  const trayTopY = baseHeight;
-  const keycapBottomY = FLOOR_H;
-  const keycapCenterY = keycapBottomY + KEYCAP_H / 2;
-  const keycapTopY = keycapBottomY + KEYCAP_H;
-  const { fontUrl, sizeScale } = useMemo(() => {
-    const f = FONTS.find((f) => f.id === design.font) ?? FONTS[0];
-    return { fontUrl: f.ttf, sizeScale: f.sizeScale };
-  }, [design.font]);
+  waveToken: number;
+};
 
-  const keycapGeo = useMemo(() => createPlungerGeometry(KEYCAP_W, KEYCAP_D, KEYCAP_H, PLUNGER_TOP_SCALE, PLUNGER_CORNER_R), []);
-  useEffect(() => () => keycapGeo.dispose(), [keycapGeo]);
-  const frameColor = useMemo(() => darken(design.baseColor, 0.18), [design.baseColor]);
-  const lanyardX = -baseWidth / 2 - LANYARD_RING_R * 0.4;
-  const sideWallZ = BASE_DEPTH / 2 - WALL_T / 2;
-  const dividerY = FLOOR_H + WALL_H / 2;
-  const buttonTravel = Math.max(0, KEYCAP_H - WALL_H);
+export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
+  function ClickerModel({ design, onKeycapClick, highlightedIndex, waveToken }, ref) {
+    const n = design.keycaps.length;
+    const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
+    const baseHeight = FLOOR_H + WALL_H;
+    const keycapBottomY = FLOOR_H;
+    const keycapCenterY = keycapBottomY + KEYCAP_H / 2;
+    const keycapTopY = keycapBottomY + KEYCAP_H;
+    const { fontUrl, sizeScale } = useMemo(() => {
+      const f = FONTS.find((font) => font.id === design.font) ?? FONTS[0];
+      return { fontUrl: f.ttf, sizeScale: f.sizeScale };
+    }, [design.font]);
 
-  return (
-    <group position={[0, -baseHeight / 2, 0]}>
-      {/* Single-piece housing */}
-      <RoundedBox
-        position={[0, baseHeight / 2, 0]}
-        args={[baseWidth, baseHeight, BASE_DEPTH]}
-        radius={0.1}
-        smoothness={5}
-        castShadow
-        receiveShadow
-      >
-        <BasePlastic color={design.baseColor} />
-      </RoundedBox>
+    const keycapGeo = useMemo(
+      () =>
+        createPlungerGeometry(
+          KEYCAP_W,
+          KEYCAP_D,
+          KEYCAP_H,
+          PLUNGER_TOP_SCALE,
+          PLUNGER_CORNER_R,
+        ),
+      [],
+    );
+    useEffect(() => () => keycapGeo.dispose(), [keycapGeo]);
 
-      {/* Lanyard loop */}
-      <mesh
-        position={[lanyardX, baseHeight / 2, 0]}
-        rotation={[Math.PI / 2, 0, 0]}
-        castShadow
-        receiveShadow
-      >
-        <torusGeometry
-          args={[
-            (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
-            (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
-            20,
-            40,
-          ]}
-        />
-        <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
-      </mesh>
-      <RoundedBox
-        position={[lanyardX + LANYARD_RING_R * 0.58, baseHeight / 2, 0]}
-        args={[LANYARD_STEM_W, 0.12, 0.32]}
-        radius={0.04}
-        smoothness={4}
-        castShadow
-        receiveShadow
-      >
-        <BasePlastic color={design.baseColor} />
-      </RoundedBox>
+    const frameColor = useMemo(() => darken(design.baseColor, 0.18), [design.baseColor]);
+    const lanyardX = -baseWidth / 2 - LANYARD_RING_R * 0.4;
+    const dividerY = FLOOR_H + WALL_H / 2;
+    const buttonTravel = Math.max(0, KEYCAP_H - WALL_H);
+    const capTravel = KEYCAP_H * KEYCAP_WAVE_PRESS_RATIO;
+    const waveStartMsRef = useRef<number | null>(null);
+    const movingKeyRefs = useRef<Array<THREE.Group | null>>([]);
+    const shadowMaterialRefs = useRef<Array<THREE.MeshBasicMaterial | null>>([]);
 
-      {/* Tray floor tint */}
-      <RoundedBox
-        position={[0, FLOOR_H + 0.012, 0]}
-        args={[baseWidth - INNER_INSET * 2, 0.024, BASE_DEPTH - INNER_INSET * 2]}
-        radius={0.04}
-        smoothness={4}
-        receiveShadow
-      >
-        <FramePlastic color={frameColor} />
-      </RoundedBox>
+    const applyRestPose = useCallback(() => {
+      movingKeyRefs.current.forEach((node) => {
+        if (node) node.position.y = 0;
+      });
+      shadowMaterialRefs.current.forEach((material) => {
+        if (material) material.opacity = 0.08;
+      });
+    }, []);
 
-      {/* Dividers */}
-      {Array.from({ length: Math.max(0, n - 1) }).map((_, i) => {
-        const dividerX = (i - (n - 2) / 2) * KEYCAP_SPACING + KEYCAP_SPACING / 2;
-        return (
-          <RoundedBox
-            key={`divider-${i}`}
-            position={[dividerX, dividerY, 0]}
-            args={[DIVIDER_T, WALL_H, BASE_DEPTH - INNER_INSET * 2.1]}
-            radius={0.05}
-            smoothness={4}
-            castShadow
-            receiveShadow
-          >
-            <BasePlastic color={design.baseColor} />
-          </RoundedBox>
-        );
-      })}
+    useEffect(() => {
+      if (waveToken <= 0) return;
+      waveStartMsRef.current = performance.now();
+    }, [waveToken]);
 
-      {/* Keycaps + letters */}
-      {design.keycaps.map((kc, i) => {
-        const x = (i - (n - 1) / 2) * KEYCAP_SPACING;
-        const isHighlighted = highlightedIndex === i;
+    useEffect(() => {
+      applyRestPose();
+    }, [applyRestPose, n]);
 
-        return (
-          <group key={i}>
-            <mesh
-              position={[x, keycapCenterY, 0]}
-              geometry={keycapGeo}
+    useImperativeHandle(
+      ref,
+      () => ({
+        forceRest() {
+          waveStartMsRef.current = null;
+          applyRestPose();
+        },
+      }),
+      [applyRestPose],
+    );
+
+    useFrame(() => {
+      const startMs = waveStartMsRef.current;
+      if (startMs === null) {
+        applyRestPose();
+        return;
+      }
+
+      const elapsedMs = performance.now() - startMs;
+      if (elapsedMs >= getKeycapWaveDurationMs(n)) {
+        waveStartMsRef.current = null;
+        applyRestPose();
+        return;
+      }
+
+      for (let i = 0; i < n; i++) {
+        const press = sampleKeycapWavePress(elapsedMs, i);
+        const keyNode = movingKeyRefs.current[i];
+        if (keyNode) {
+          keyNode.position.y = -press * capTravel;
+        }
+
+        const shadowMaterial = shadowMaterialRefs.current[i];
+        if (shadowMaterial) {
+          shadowMaterial.opacity = 0.08 + Math.max(0, press) * 0.16;
+        }
+      }
+    });
+
+    return (
+      <group position={[0, -baseHeight / 2, 0]}>
+        {/* Single-piece housing */}
+        <RoundedBox
+          position={[0, baseHeight / 2, 0]}
+          args={[baseWidth, baseHeight, BASE_DEPTH]}
+          radius={0.1}
+          smoothness={5}
+          castShadow
+          receiveShadow
+        >
+          <BasePlastic color={design.baseColor} />
+        </RoundedBox>
+
+        {/* Lanyard loop */}
+        <mesh
+          position={[lanyardX, baseHeight / 2, 0]}
+          rotation={[Math.PI / 2, 0, 0]}
+          castShadow
+          receiveShadow
+        >
+          <torusGeometry
+            args={[
+              (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
+              (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
+              20,
+              40,
+            ]}
+          />
+          <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
+        </mesh>
+        <RoundedBox
+          position={[lanyardX + LANYARD_RING_R * 0.58, baseHeight / 2, 0]}
+          args={[LANYARD_STEM_W, 0.12, 0.32]}
+          radius={0.04}
+          smoothness={4}
+          castShadow
+          receiveShadow
+        >
+          <BasePlastic color={design.baseColor} />
+        </RoundedBox>
+
+        {/* Tray floor tint */}
+        <RoundedBox
+          position={[0, FLOOR_H + 0.012, 0]}
+          args={[baseWidth - INNER_INSET * 2, 0.024, BASE_DEPTH - INNER_INSET * 2]}
+          radius={0.04}
+          smoothness={4}
+          receiveShadow
+        >
+          <FramePlastic color={frameColor} />
+        </RoundedBox>
+
+        {/* Dividers */}
+        {Array.from({ length: Math.max(0, n - 1) }).map((_, i) => {
+          const dividerX = (i - (n - 2) / 2) * KEYCAP_SPACING + KEYCAP_SPACING / 2;
+          return (
+            <RoundedBox
+              key={`divider-${i}`}
+              position={[dividerX, dividerY, 0]}
+              args={[DIVIDER_T, WALL_H, BASE_DEPTH - INNER_INSET * 2.1]}
+              radius={0.05}
+              smoothness={4}
               castShadow
               receiveShadow
-              onClick={(e) => {
-                e.stopPropagation();
-                onKeycapClick?.(i);
-              }}
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                if (typeof document !== "undefined") {
-                  document.body.style.cursor = "pointer";
-                }
-              }}
-              onPointerOut={() => {
-                if (typeof document !== "undefined") {
-                  document.body.style.cursor = "";
-                }
-              }}
             >
-              <meshStandardMaterial
-                color={kc.keycapColor}
-                roughness={0.56}
-                metalness={0.04}
-                emissive={isHighlighted ? "#ffffff" : "#000000"}
-                emissiveIntensity={isHighlighted ? 0.08 : 0}
-              />
-            </mesh>
+              <BasePlastic color={design.baseColor} />
+            </RoundedBox>
+          );
+        })}
 
-            {kc.char && (
-              <Suspense fallback={null}>
-                <ExtrudedLetter
-                  position={[x, keycapTopY - LETTER_Y_INSET * 0.65, 0]}
-                  fontUrl={fontUrl}
-                  sizeScale={sizeScale}
-                  char={kc.char}
-                  color={kc.letterColor}
+        {/* Keycaps + letters */}
+        {design.keycaps.map((kc, i) => {
+          const x = (i - (n - 1) / 2) * KEYCAP_SPACING;
+          const isHighlighted = highlightedIndex === i;
+
+          return (
+            <group key={i}>
+              <mesh
+                position={[x, FLOOR_H + 0.014, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                receiveShadow
+              >
+                <circleGeometry args={[KEYCAP_W * 0.34, 28]} />
+                <meshBasicMaterial
+                  ref={(node) => {
+                    shadowMaterialRefs.current[i] = node;
+                  }}
+                  color="#000000"
+                  transparent
+                  opacity={0.08}
+                  depthWrite={false}
                 />
-              </Suspense>
-            )}
+              </mesh>
 
-            {/* Exposed plunger travel area below the tray line */}
-            <mesh position={[x, FLOOR_H + buttonTravel / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[KEYCAP_W * 0.7, buttonTravel, KEYCAP_D * 0.7]} />
-              <meshStandardMaterial color={darken(kc.keycapColor, 0.16)} roughness={0.6} metalness={0.02} />
-            </mesh>
-          </group>
-        );
-      })}
-    </group>
-  );
-}
+              <group
+                ref={(node) => {
+                  movingKeyRefs.current[i] = node;
+                }}
+              >
+                <mesh
+                  position={[x, keycapCenterY, 0]}
+                  geometry={keycapGeo}
+                  castShadow
+                  receiveShadow
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onKeycapClick?.(i);
+                  }}
+                  onPointerOver={(e) => {
+                    e.stopPropagation();
+                    if (typeof document !== "undefined") {
+                      document.body.style.cursor = "pointer";
+                    }
+                  }}
+                  onPointerOut={() => {
+                    if (typeof document !== "undefined") {
+                      document.body.style.cursor = "";
+                    }
+                  }}
+                >
+                  <meshStandardMaterial
+                    color={kc.keycapColor}
+                    roughness={0.56}
+                    metalness={0.04}
+                    emissive={isHighlighted ? "#ffffff" : "#000000"}
+                    emissiveIntensity={isHighlighted ? 0.08 : 0}
+                  />
+                </mesh>
+
+                {kc.char && (
+                  <Suspense fallback={null}>
+                    <ExtrudedLetter
+                      position={[x, keycapTopY - LETTER_Y_INSET * 0.65, 0]}
+                      fontUrl={fontUrl}
+                      sizeScale={sizeScale}
+                      char={kc.char}
+                      color={kc.letterColor}
+                    />
+                  </Suspense>
+                )}
+              </group>
+
+              {/* Exposed plunger travel area below the tray line */}
+              <mesh position={[x, FLOOR_H + buttonTravel / 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[KEYCAP_W * 0.7, buttonTravel, KEYCAP_D * 0.7]} />
+                <meshStandardMaterial
+                  color={darken(kc.keycapColor, 0.16)}
+                  roughness={0.6}
+                  metalness={0.02}
+                />
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
+    );
+  },
+);
+
+ClickerModel.displayName = "ClickerModel";

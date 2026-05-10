@@ -9,15 +9,22 @@ import {
 import { Suspense, useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { Design } from "@/lib/types";
-import { ClickerModel } from "./clicker-model";
+import { ClickerModel, type ClickerModelHandle } from "./clicker-model";
 
 export type ExportFn = () => string | null;
 
-function ExportBridge({ exportRef }: { exportRef: React.MutableRefObject<ExportFn | null> }) {
+function ExportBridge({
+  exportRef,
+  onBeforeExport,
+}: {
+  exportRef: React.MutableRefObject<ExportFn | null>;
+  onBeforeExport: () => void;
+}) {
   const { gl, scene, camera } = useThree();
   useEffect(() => {
     exportRef.current = () => {
       try {
+        onBeforeExport();
         const prev = gl.getPixelRatio();
         gl.setPixelRatio(Math.min(window.devicePixelRatio * 2, 4));
         gl.render(scene, camera);
@@ -33,7 +40,7 @@ function ExportBridge({ exportRef }: { exportRef: React.MutableRefObject<ExportF
     return () => {
       exportRef.current = null;
     };
-  }, [gl, scene, camera, exportRef]);
+  }, [camera, exportRef, gl, onBeforeExport, scene]);
   return null;
 }
 
@@ -65,6 +72,7 @@ export function ClickerScene({
   onKeycapClick,
   highlightedIndex,
   exportRef,
+  waveToken,
   idle,
   onUserInteract,
 }: {
@@ -72,9 +80,12 @@ export function ClickerScene({
   onKeycapClick?: (i: number) => void;
   highlightedIndex?: number | null;
   exportRef: React.MutableRefObject<ExportFn | null>;
+  waveToken: number;
   idle: boolean;
   onUserInteract: () => void;
 }) {
+  const modelRef = useRef<ClickerModelHandle | null>(null);
+
   return (
     <Canvas
       shadows
@@ -105,9 +116,11 @@ export function ClickerScene({
       <Suspense fallback={null}>
         <Environment preset="studio" background={false} />
         <ClickerModel
+          ref={modelRef}
           design={design}
           onKeycapClick={onKeycapClick}
           highlightedIndex={highlightedIndex}
+          waveToken={waveToken}
         />
         <ContactShadows
           position={[0, -0.001, 0]}
@@ -128,7 +141,10 @@ export function ClickerScene({
         onStart={onUserInteract}
       />
       <IdleSpin active={idle} />
-      <ExportBridge exportRef={exportRef} />
+      <ExportBridge
+        exportRef={exportRef}
+        onBeforeExport={() => modelRef.current?.forceRest()}
+      />
       <fog attach="fog" args={["#fafafa", 14, 30]} />
       <CameraFit keycapCount={design.keycaps.length} />
     </Canvas>
@@ -151,6 +167,8 @@ function CameraFit({ keycapCount }: { keycapCount: number }) {
     // Effective camera depth to world origin (camera at [0, 3.5, 7])
     const camDepth = Math.sqrt(3.5 * 3.5 + 7 * 7);
     const minVFov = (2 * Math.atan(modelHalfWidth / (camDepth * aspect)) * 180) / Math.PI;
+    // This scene intentionally adjusts the active PerspectiveCamera after mount.
+    // eslint-disable-next-line react-hooks/immutability
     camera.fov = Math.max(32, Math.min(80, minVFov));
     camera.updateProjectionMatrix();
   }, [camera, size, keycapCount]);
