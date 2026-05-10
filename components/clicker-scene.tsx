@@ -1,71 +1,75 @@
-"use client";
-import { Canvas, useThree } from "@react-three/fiber";
+"use client"
+import { Canvas, useThree } from "@react-three/fiber"
 import {
   ContactShadows,
   Environment,
   OrbitControls,
   PerspectiveCamera,
-} from "@react-three/drei";
-import { Suspense, useEffect, useRef } from "react";
-import * as THREE from "three";
-import type { WaveRequest } from "@/lib/keycap-wave";
-import type { Design } from "@/lib/types";
-import { ClickerModel, type ClickerModelHandle } from "./clicker-model";
+} from "@react-three/drei"
+import { Suspense, useEffect, useRef } from "react"
+import * as THREE from "three"
+import type { WaveRequest } from "@/lib/keycap-wave"
+import type { Design } from "@/lib/types"
+import { ClickerModel, type ClickerModelHandle } from "./clicker-model"
 
-export type ExportFn = () => string | null;
+export type ExportFn = () => string | null
+
+const INITIAL_CAMERA_POSITION: [number, number, number] = [-3, 7, 5]
+const INITIAL_CAMERA_FOV = 32
 
 function ExportBridge({
   exportRef,
   onBeforeExport,
 }: {
-  exportRef: React.MutableRefObject<ExportFn | null>;
-  onBeforeExport: () => void;
+  exportRef: React.MutableRefObject<ExportFn | null>
+  onBeforeExport: () => void
 }) {
-  const { gl, scene, camera } = useThree();
+  const { gl, scene, camera } = useThree()
   useEffect(() => {
     exportRef.current = () => {
       try {
-        onBeforeExport();
-        const prev = gl.getPixelRatio();
-        gl.setPixelRatio(Math.min(window.devicePixelRatio * 2, 4));
-        gl.render(scene, camera);
-        const url = gl.domElement.toDataURL("image/png");
-        gl.setPixelRatio(prev);
-        gl.render(scene, camera);
-        return url;
+        onBeforeExport()
+        const prev = gl.getPixelRatio()
+        gl.setPixelRatio(Math.min(window.devicePixelRatio * 2, 4))
+        gl.render(scene, camera)
+        const url = gl.domElement.toDataURL("image/png")
+        gl.setPixelRatio(prev)
+        gl.render(scene, camera)
+        return url
       } catch (err) {
-        console.error("Export failed", err);
-        return null;
+        console.error("Export failed", err)
+        return null
       }
-    };
+    }
     return () => {
-      exportRef.current = null;
-    };
-  }, [camera, exportRef, gl, onBeforeExport, scene]);
-  return null;
+      exportRef.current = null
+    }
+  }, [camera, exportRef, gl, onBeforeExport, scene])
+  return null
 }
 
 function IdleSpin({ active }: { active: boolean }) {
-  const t = useRef(0);
-  const { camera } = useThree();
+  const t = useRef(0)
+  const { camera } = useThree()
   useEffect(() => {
-    if (!active) return;
-    let raf = 0;
-    let last = performance.now();
+    if (!active) return
+    let raf = 0
+    let last = performance.now()
+    t.current = Math.atan2(camera.position.x, camera.position.z)
     const tick = (now: number) => {
-      const dt = (now - last) / 1000;
-      last = now;
-      t.current += dt * 0.35;
-      const r = Math.hypot(camera.position.x, camera.position.z);
-      camera.position.x = Math.sin(t.current) * r;
-      camera.position.z = Math.cos(t.current) * r;
-      camera.lookAt(0, 0, 0);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [active, camera]);
-  return null;
+      const dt = (now - last) / 1000
+      last = now
+      t.current += dt * 0.35
+      const r = Math.hypot(camera.position.x, camera.position.z)
+      camera.position.x = Math.sin(t.current) * r
+      camera.position.z = Math.cos(t.current) * r
+      camera.lookAt(0, 0, 0)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [active, camera])
+  return null
 }
 
 export function ClickerScene({
@@ -77,15 +81,15 @@ export function ClickerScene({
   idle,
   onUserInteract,
 }: {
-  design: Design;
-  onKeycapClick?: (i: number) => void;
-  highlightedIndex?: number | null;
-  exportRef: React.MutableRefObject<ExportFn | null>;
-  waveRequest: WaveRequest;
-  idle: boolean;
-  onUserInteract: () => void;
+  design: Design
+  onKeycapClick?: (i: number) => void
+  highlightedIndex?: number | null
+  exportRef: React.MutableRefObject<ExportFn | null>
+  waveRequest: WaveRequest
+  idle: boolean
+  onUserInteract: () => void
 }) {
-  const modelRef = useRef<ClickerModelHandle | null>(null);
+  const modelRef = useRef<ClickerModelHandle | null>(null)
 
   return (
     <Canvas
@@ -99,10 +103,14 @@ export function ClickerScene({
       }}
       onPointerDown={onUserInteract}
       onWheel={onUserInteract}
-      camera={{ position: [0, 3.5, 7], fov: 32 }}
+      camera={{ position: INITIAL_CAMERA_POSITION, fov: INITIAL_CAMERA_FOV }}
     >
       <color attach="background" args={["#fafafa"]} />
-      <PerspectiveCamera makeDefault position={[0, 3.5, 7]} fov={32} />
+      <PerspectiveCamera
+        makeDefault
+        position={INITIAL_CAMERA_POSITION}
+        fov={INITIAL_CAMERA_FOV}
+      />
 
       <ambientLight intensity={0.2} />
       <directionalLight
@@ -149,29 +157,30 @@ export function ClickerScene({
       <fog attach="fog" args={["#fafafa", 14, 30]} />
       <CameraFit keycapCount={design.keycaps.length} />
     </Canvas>
-  );
+  )
 }
 
 // Widens vFOV on portrait/narrow viewports so the full model stays visible.
 function CameraFit({ keycapCount }: { keycapCount: number }) {
-  const { camera, size } = useThree();
+  const { camera, size } = useThree()
   useEffect(() => {
-    if (!(camera instanceof THREE.PerspectiveCamera)) return;
-    const aspect = size.width / size.height;
+    if (!(camera instanceof THREE.PerspectiveCamera)) return
+    const aspect = size.width / size.height
     // Model geometry constants (must match clicker-model.tsx)
-    const KEYCAP_SPACING = 0.98;
-    const BASE_PAD = 0.22;
-    const LANYARD_RING_R = 0.18;
-    const n = keycapCount;
-    const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
-    const modelHalfWidth = baseWidth / 2 + LANYARD_RING_R * 0.75 + 0.28;
-    // Effective camera depth to world origin (camera at [0, 3.5, 7])
-    const camDepth = Math.sqrt(3.5 * 3.5 + 7 * 7);
-    const minVFov = (2 * Math.atan(modelHalfWidth / (camDepth * aspect)) * 180) / Math.PI;
+    const KEYCAP_SPACING = 0.98
+    const BASE_PAD = 0.22
+    const LANYARD_RING_R = 0.18
+    const n = keycapCount
+    const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2
+    const modelHalfWidth = baseWidth / 2 + LANYARD_RING_R * 0.75 + 0.28
+    const [camX, camY, camZ] = INITIAL_CAMERA_POSITION
+    const camDepth = Math.sqrt(camX * camX + camY * camY + camZ * camZ)
+    const minVFov =
+      (2 * Math.atan(modelHalfWidth / (camDepth * aspect)) * 180) / Math.PI
     // This scene intentionally adjusts the active PerspectiveCamera after mount.
     // eslint-disable-next-line react-hooks/immutability
-    camera.fov = Math.max(32, Math.min(80, minVFov));
-    camera.updateProjectionMatrix();
-  }, [camera, size, keycapCount]);
-  return null;
+    camera.fov = Math.max(INITIAL_CAMERA_FOV, Math.min(80, minVFov))
+    camera.updateProjectionMatrix()
+  }, [camera, size, keycapCount])
+  return null
 }
