@@ -158,7 +158,9 @@ export function useDesign() {
     const d = params.get("d");
     if (d) {
       const parsed = decodeDesign(d);
-      if (parsed) dispatch({ type: "loadDesign", design: parsed });
+      if (parsed) {
+        dispatch({ type: "loadDesign", design: parsed });
+      }
     }
   }, []);
 

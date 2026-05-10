@@ -13,11 +13,13 @@ import {
 } from "react";
 import * as THREE from "three";
 import {
-  getKeycapWaveDurationMs,
   KEYCAP_WAVE_PRESS_RATIO,
-  sampleKeycapWavePress,
   type WaveRequest,
 } from "@/lib/keycap-wave";
+import {
+  createKeycapWaveRuntime,
+  type KeycapWaveRuntime,
+} from "@/lib/keycap-wave-runtime";
 import type { Design } from "@/lib/types";
 import { FONTS } from "@/lib/types";
 import type { Font } from "opentype.js";
@@ -59,7 +61,6 @@ async function loadFont(url: string) {
 
 const PLUNGER_TOP_SCALE = 0.82;
 const PLUNGER_CORNER_R = 0.16;
-const GLYPH_WAVE_FALLBACK_MS = 250;
 
 /**
  * Tapered rounded rect used for the physical clicker plungers.
@@ -291,13 +292,10 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
     const dividerY = FLOOR_H + WALL_H / 2;
     const buttonTravel = Math.max(0, KEYCAP_H - WALL_H);
     const capTravel = KEYCAP_H * KEYCAP_WAVE_PRESS_RATIO;
-    const waveStartMsRef = useRef<number | null>(null);
     const handledWaveRequestIdRef = useRef(0);
-    const pendingWaveRef = useRef<WaveRequest | null>(null);
-    const pendingWaveDeadlineRef = useRef<number | null>(null);
+    const waveRuntimeRef = useRef<KeycapWaveRuntime>(createKeycapWaveRuntime());
     const movingKeyRefs = useRef<Array<THREE.Group | null>>([]);
     const shadowMaterialRefs = useRef<Array<THREE.MeshBasicMaterial | null>>([]);
-    const readyGlyphKeysRef = useRef<Set<string>>(new Set());
 
     const expectedGlyphKeys = useMemo(
       () =>
@@ -316,57 +314,24 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
       });
     }, []);
 
-    const startWave = useCallback(() => {
-      pendingWaveRef.current = null;
-      pendingWaveDeadlineRef.current = null;
-      waveStartMsRef.current = performance.now();
-      readyGlyphKeysRef.current = new Set(expectedGlyphKeys);
-    }, [expectedGlyphKeys]);
-
-    const tryStartPendingGlyphWave = useCallback(() => {
-      const pendingWave = pendingWaveRef.current;
-      if (!pendingWave?.awaitGlyphs) return;
-      const allReady = expectedGlyphKeys.every((key) => readyGlyphKeysRef.current.has(key));
-      if (allReady) {
-        startWave();
-      }
-    }, [expectedGlyphKeys, startWave]);
-
     const onGlyphReady = useCallback(
       (glyphKey: string) => {
-        readyGlyphKeysRef.current.add(glyphKey);
-        tryStartPendingGlyphWave();
+        waveRuntimeRef.current.markGlyphReady(glyphKey, performance.now());
       },
-      [tryStartPendingGlyphWave],
+      [],
     );
 
     useEffect(() => {
-      readyGlyphKeysRef.current = new Set(
-        Array.from(readyGlyphKeysRef.current).filter((key) => expectedGlyphKeys.includes(key)),
-      );
+      waveRuntimeRef.current.syncExpectedGlyphKeys(expectedGlyphKeys);
     }, [expectedGlyphKeys]);
 
     useEffect(() => {
       if (waveRequest.id <= 0 || waveRequest.id === handledWaveRequestIdRef.current) return;
       handledWaveRequestIdRef.current = waveRequest.id;
 
-      waveStartMsRef.current = null;
+      waveRuntimeRef.current.requestWave(waveRequest, performance.now());
       applyRestPose();
-
-      if (!waveRequest.awaitGlyphs || expectedGlyphKeys.length === 0) {
-        startWave();
-        return;
-      }
-
-      const allReady = expectedGlyphKeys.every((key) => readyGlyphKeysRef.current.has(key));
-      if (allReady) {
-        startWave();
-        return;
-      }
-
-      pendingWaveRef.current = waveRequest;
-      pendingWaveDeadlineRef.current = performance.now() + GLYPH_WAVE_FALLBACK_MS;
-    }, [applyRestPose, expectedGlyphKeys, startWave, waveRequest]);
+    }, [applyRestPose, waveRequest]);
 
     useEffect(() => {
       applyRestPose();
@@ -376,9 +341,7 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
       ref,
       () => ({
         forceRest() {
-          waveStartMsRef.current = null;
-          pendingWaveRef.current = null;
-          pendingWaveDeadlineRef.current = null;
+          waveRuntimeRef.current.forceRest();
           applyRestPose();
         },
       }),
@@ -386,31 +349,14 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
     );
 
     useFrame(() => {
-      const pendingWave = pendingWaveRef.current;
-      const pendingDeadline = pendingWaveDeadlineRef.current;
-      if (
-        pendingWave &&
-        pendingDeadline !== null &&
-        performance.now() >= pendingDeadline
-      ) {
-        startWave();
-      }
-
-      const startMs = waveStartMsRef.current;
-      if (startMs === null) {
-        applyRestPose();
-        return;
-      }
-
-      const elapsedMs = performance.now() - startMs;
-      if (elapsedMs >= getKeycapWaveDurationMs(n)) {
-        waveStartMsRef.current = null;
+      const snapshot = waveRuntimeRef.current.sample(performance.now(), n);
+      if (snapshot.atRest) {
         applyRestPose();
         return;
       }
 
       for (let i = 0; i < n; i++) {
-        const press = sampleKeycapWavePress(elapsedMs, i);
+        const press = snapshot.presses[i] ?? 0;
         const keyNode = movingKeyRefs.current[i];
         if (keyNode) {
           keyNode.position.y = -press * capTravel;

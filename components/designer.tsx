@@ -1,15 +1,19 @@
 "use client"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  createDesignerWaveController,
+  type DesignerWaveController,
+} from "@/lib/designer-wave"
 import type { WaveRequest } from "@/lib/keycap-wave"
 import { useDesign } from "@/lib/use-design"
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion"
 import { th } from "@/lib/i18n/th"
 import { ClickerScene, type ExportFn } from "./clicker-scene"
 import { ControlsPanel } from "./controls-panel"
 
-const WORD_WAVE_DEBOUNCE_MS = 150
-
 export function Designer() {
   const d = useDesign()
+  const prefersReducedMotion = usePrefersReducedMotion()
   const {
     addKeycap,
     applyDefaultsToAll,
@@ -25,36 +29,36 @@ export function Designer() {
     setWord,
   } = d
   const exportRef = useRef<ExportFn | null>(null)
-  const pendingWordWaveRef = useRef<number | null>(null)
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null)
   const [idle, setIdle] = useState(false)
   const [waveRequest, setWaveRequest] = useState<WaveRequest>({ id: 0, awaitGlyphs: false })
 
-  const stopIdle = useCallback(() => setIdle(false), [])
-  const clearPendingWordWave = useCallback(() => {
-    if (pendingWordWaveRef.current !== null) {
-      window.clearTimeout(pendingWordWaveRef.current)
-      pendingWordWaveRef.current = null
-    }
-  }, [])
-  const triggerWave = useCallback(
-    (awaitGlyphs: boolean) => {
-      clearPendingWordWave()
-      setWaveRequest((current) => ({ id: current.id + 1, awaitGlyphs }))
-    },
-    [clearPendingWordWave],
+  const waveController = useMemo<DesignerWaveController>(
+    () =>
+      createDesignerWaveController({
+        getPrefersReducedMotion: () => prefersReducedMotion,
+        timer: {
+          setTimeout: (cb, ms) => window.setTimeout(cb, ms),
+          clearTimeout: (id) => window.clearTimeout(id),
+        },
+        onWave: (request) => {
+          setWaveRequest(request)
+        },
+      }),
+    [prefersReducedMotion],
   )
-  const scheduleWordWave = useCallback(() => {
-    clearPendingWordWave()
-    pendingWordWaveRef.current = window.setTimeout(() => {
-      pendingWordWaveRef.current = null
-      setWaveRequest((current) => ({ id: current.id + 1, awaitGlyphs: true }))
-    }, WORD_WAVE_DEBOUNCE_MS)
-  }, [clearPendingWordWave])
+  const stopIdle = useCallback(() => setIdle(false), [setIdle])
 
   useEffect(() => {
-    return () => clearPendingWordWave()
-  }, [clearPendingWordWave])
+    return () => waveController.dispose()
+  }, [waveController])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    if (!params.has("d")) return
+    waveController.restoreFromUrl()
+  }, [waveController])
 
   const onKeycapClick = useCallback((i: number) => {
     setHighlightedIndex(i)
@@ -63,87 +67,87 @@ export function Designer() {
     window.setTimeout(() => {
       setHighlightedIndex((cur) => (cur === i ? null : cur))
     }, 2400)
-  }, [])
+  }, [setHighlightedIndex, setIdle])
 
   const onSetBaseColor = useCallback(
     (color: string) => {
       setBaseColor(color)
-      triggerWave(false)
+      waveController.triggerVisibleEdit(false)
     },
-    [setBaseColor, triggerWave],
+    [setBaseColor, waveController],
   )
 
   const onSetWord = useCallback(
     (word: string) => {
       setWord(word)
-      scheduleWordWave()
+      waveController.scheduleWordWave()
     },
-    [scheduleWordWave, setWord],
+    [setWord, waveController],
   )
 
   const onSetKeycapChar = useCallback(
     (index: number, char: string) => {
       setKeycapChar(index, char)
-      triggerWave(false)
+      waveController.triggerVisibleEdit(false)
     },
-    [setKeycapChar, triggerWave],
+    [setKeycapChar, waveController],
   )
 
   const onSetKeycapColor = useCallback(
     (index: number, color: string) => {
       setKeycapColor(index, color)
-      triggerWave(false)
+      waveController.triggerVisibleEdit(false)
     },
-    [setKeycapColor, triggerWave],
+    [setKeycapColor, waveController],
   )
 
   const onSetLetterColor = useCallback(
     (index: number, color: string) => {
       setLetterColor(index, color)
-      triggerWave(false)
+      waveController.triggerVisibleEdit(false)
     },
-    [setLetterColor, triggerWave],
+    [setLetterColor, waveController],
   )
 
   const onResetKeycap = useCallback(
     (index: number) => {
       resetKeycap(index)
-      triggerWave(false)
+      waveController.triggerVisibleEdit(false)
     },
-    [resetKeycap, triggerWave],
+    [resetKeycap, waveController],
   )
 
   const onAddKeycap = useCallback(() => {
     addKeycap()
-    triggerWave(false)
-  }, [addKeycap, triggerWave])
+    waveController.triggerVisibleEdit(false)
+  }, [addKeycap, waveController])
 
   const onRemoveKeycap = useCallback(() => {
     removeKeycap()
-    triggerWave(false)
-  }, [removeKeycap, triggerWave])
+    waveController.triggerVisibleEdit(false)
+  }, [removeKeycap, waveController])
 
   const onApplyDefaultsToAll = useCallback(() => {
     applyDefaultsToAll()
-    triggerWave(false)
-  }, [applyDefaultsToAll, triggerWave])
+    waveController.triggerVisibleEdit(false)
+  }, [applyDefaultsToAll, waveController])
 
   const onRandomizeColors = useCallback(() => {
     randomizeColors()
-    triggerWave(false)
-  }, [randomizeColors, triggerWave])
+    waveController.triggerVisibleEdit(false)
+  }, [randomizeColors, waveController])
 
   const onReset = useCallback(() => {
     reset()
-    triggerWave(false)
-  }, [reset, triggerWave])
+    waveController.triggerVisibleEdit(false)
+  }, [reset, waveController])
 
   const onSetFont = useCallback(
     (font: Parameters<typeof setFont>[0]) => {
       setFont(font)
-      triggerWave(true)
+      waveController.triggerVisibleEdit(true)
     },
-    [setFont, triggerWave],
+    [setFont, waveController],
   )
 
   const onSaveImage = useCallback(() => {
