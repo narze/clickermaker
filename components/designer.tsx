@@ -7,7 +7,18 @@ import { ControlsPanel } from "./controls-panel"
 
 export function Designer() {
   const d = useDesign()
-  const { setBaseColor } = d
+  const {
+    addKeycap,
+    applyDefaultsToAll,
+    randomizeColors,
+    removeKeycap,
+    reset,
+    resetKeycap,
+    setBaseColor,
+    setKeycapChar,
+    setKeycapColor,
+    setLetterColor,
+  } = d
   const exportRef = useRef<ExportFn | null>(null)
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null)
   const [idle, setIdle] = useState(false)
@@ -34,6 +45,63 @@ export function Designer() {
     },
     [setBaseColor, triggerWave],
   )
+
+  const onSetKeycapChar = useCallback(
+    (index: number, char: string) => {
+      setKeycapChar(index, char)
+      triggerWave()
+    },
+    [setKeycapChar, triggerWave],
+  )
+
+  const onSetKeycapColor = useCallback(
+    (index: number, color: string) => {
+      setKeycapColor(index, color)
+      triggerWave()
+    },
+    [setKeycapColor, triggerWave],
+  )
+
+  const onSetLetterColor = useCallback(
+    (index: number, color: string) => {
+      setLetterColor(index, color)
+      triggerWave()
+    },
+    [setLetterColor, triggerWave],
+  )
+
+  const onResetKeycap = useCallback(
+    (index: number) => {
+      resetKeycap(index)
+      triggerWave()
+    },
+    [resetKeycap, triggerWave],
+  )
+
+  const onAddKeycap = useCallback(() => {
+    addKeycap()
+    triggerWave()
+  }, [addKeycap, triggerWave])
+
+  const onRemoveKeycap = useCallback(() => {
+    removeKeycap()
+    triggerWave()
+  }, [removeKeycap, triggerWave])
+
+  const onApplyDefaultsToAll = useCallback(() => {
+    applyDefaultsToAll()
+    triggerWave()
+  }, [applyDefaultsToAll, triggerWave])
+
+  const onRandomizeColors = useCallback(() => {
+    randomizeColors()
+    triggerWave()
+  }, [randomizeColors, triggerWave])
+
+  const onReset = useCallback(() => {
+    reset()
+    triggerWave()
+  }, [reset, triggerWave])
 
   const onSaveImage = useCallback(() => {
     const fn = exportRef.current
@@ -75,19 +143,19 @@ export function Designer() {
         word={d.word}
         highlightedIndex={highlightedIndex}
         onSetWord={d.setWord}
-        onSetKeycapChar={d.setKeycapChar}
-        onSetKeycapColor={d.setKeycapColor}
-        onSetLetterColor={d.setLetterColor}
-        onResetKeycap={d.resetKeycap}
-        onAddKeycap={d.addKeycap}
-        onRemoveKeycap={d.removeKeycap}
+        onSetKeycapChar={onSetKeycapChar}
+        onSetKeycapColor={onSetKeycapColor}
+        onSetLetterColor={onSetLetterColor}
+        onResetKeycap={onResetKeycap}
+        onAddKeycap={onAddKeycap}
+        onRemoveKeycap={onRemoveKeycap}
         onSetBaseColor={onSetBaseColor}
         onSetDefaultKeycapColor={d.setDefaultKeycapColor}
         onSetDefaultLetterColor={d.setDefaultLetterColor}
-        onApplyDefaultsToAll={d.applyDefaultsToAll}
-        onRandomizeColors={d.randomizeColors}
+        onApplyDefaultsToAll={onApplyDefaultsToAll}
+        onRandomizeColors={onRandomizeColors}
         onSetFont={d.setFont}
-        onReset={d.reset}
+        onReset={onReset}
         onSaveImage={onSaveImage}
       />
     </div>
