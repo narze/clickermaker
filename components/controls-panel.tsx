@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Design, FontId } from "@/lib/types";
 import { FONTS, MAX_KEYCAPS, MIN_KEYCAPS, sanitizeWord } from "@/lib/types";
 import { BASE_PALETTE, KEYCAP_PALETTE, LETTER_PALETTE } from "@/lib/palette";
+import { th } from "@/lib/i18n/th";
 import { cn } from "@/lib/utils";
 import { ColorPicker } from "./color-picker";
 import { KeycapRow } from "./keycap-row";
@@ -53,12 +54,12 @@ export function ControlsPanel({
   return (
     <aside className="flex flex-col gap-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 lg:max-h-[80vh] lg:overflow-y-auto">
       {/* Word + length */}
-      <Section title="Your text">
+      <Section title={th.controls.yourText}>
         <div className="flex flex-col gap-2">
           <input
             type="text"
             value={localWord}
-            placeholder="Type your word"
+            placeholder={th.controls.typeWord}
             maxLength={MAX_KEYCAPS}
             onChange={(e) => {
               const v = sanitizeWord(e.target.value);
@@ -69,14 +70,14 @@ export function ControlsPanel({
           />
           <div className="flex items-center justify-between">
             <div className="text-xs text-neutral-500">
-              {n} keycap{n === 1 ? "" : "s"}
+              {th.controls.keycapCount(n)}
             </div>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={onRemoveKeycap}
                 disabled={n <= MIN_KEYCAPS}
-                aria-label="Remove keycap"
+                aria-label={th.controls.removeKeycap}
                 className="rounded-md border border-neutral-200 bg-white p-1.5 hover:bg-neutral-50 disabled:opacity-40"
               >
                 <Minus className="size-4" />
@@ -85,7 +86,7 @@ export function ControlsPanel({
                 type="button"
                 onClick={onAddKeycap}
                 disabled={n >= MAX_KEYCAPS}
-                aria-label="Add keycap"
+                aria-label={th.controls.addKeycap}
                 className="rounded-md border border-neutral-200 bg-white p-1.5 hover:bg-neutral-50 disabled:opacity-40"
               >
                 <Plus className="size-4" />
@@ -96,7 +97,7 @@ export function ControlsPanel({
       </Section>
 
       {/* Font */}
-      <Section title="Font">
+      <Section title={th.controls.font}>
         <div className="grid grid-cols-2 gap-2">
           {FONTS.map((f) => (
             <button
@@ -117,13 +118,13 @@ export function ControlsPanel({
       </Section>
 
       {/* Base color */}
-      <Section title="Base color">
+      <Section title={th.controls.baseColor}>
         <div className="flex items-center gap-3">
           <ColorPicker
             value={design.baseColor}
             onChange={onSetBaseColor}
             swatches={BASE_PALETTE}
-            label="Base"
+            label={th.controls.base}
           />
           <span className="font-mono text-xs uppercase text-neutral-500">
             {design.baseColor}
@@ -133,8 +134,8 @@ export function ControlsPanel({
 
       {/* Defaults */}
       <Section
-        title="Default keycap & letter colors"
-        subtitle="Used for new keycaps. Click 'Apply to all' to overwrite per-keycap colors."
+        title={th.controls.defaultColorsTitle}
+        subtitle={th.controls.defaultColorsSubtitle}
       >
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
@@ -142,31 +143,31 @@ export function ControlsPanel({
               value={design.defaultKeycapColor}
               onChange={onSetDefaultKeycapColor}
               swatches={KEYCAP_PALETTE}
-              label="Keycap default"
+              label={th.controls.defaultKeycapColor}
             />
-            <span className="text-xs text-neutral-500">Keycap</span>
+            <span className="text-xs text-neutral-500">{th.controls.keycap}</span>
           </div>
           <div className="flex items-center gap-2">
             <ColorPicker
               value={design.defaultLetterColor}
               onChange={onSetDefaultLetterColor}
               swatches={LETTER_PALETTE}
-              label="Letter default"
+              label={th.controls.defaultLetterColor}
             />
-            <span className="text-xs text-neutral-500">Letter</span>
+            <span className="text-xs text-neutral-500">{th.controls.letter}</span>
           </div>
           <button
             type="button"
             onClick={onApplyDefaultsToAll}
             className="ml-auto rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-neutral-50"
           >
-            Apply to all
+            {th.controls.applyToAll}
           </button>
         </div>
       </Section>
 
       {/* Per-keycap list */}
-      <Section title="Per-keycap">
+      <Section title={th.controls.perKeycap}>
         <div className="flex flex-col gap-1">
           {design.keycaps.map((kc, i) => (
             <KeycapRow
@@ -191,7 +192,7 @@ export function ControlsPanel({
           className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium hover:bg-neutral-50"
         >
           <RefreshCw className="size-4" />
-          Reset
+          {th.controls.reset}
         </button>
         <button
           type="button"
@@ -199,7 +200,7 @@ export function ControlsPanel({
           className="ml-auto flex items-center gap-1.5 rounded-lg bg-pink-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
         >
           <Download className="size-4" />
-          Save image
+          {th.controls.saveImage}
         </button>
       </div>
     </aside>

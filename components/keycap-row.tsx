@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Keycap } from "@/lib/types";
 import { sanitizeChar } from "@/lib/types";
 import { KEYCAP_PALETTE, LETTER_PALETTE } from "@/lib/palette";
+import { th } from "@/lib/i18n/th";
 import { cn } from "@/lib/utils";
 import { ColorPicker } from "./color-picker";
 
@@ -55,7 +56,7 @@ export function KeycapRow({
         }}
         onFocus={(e) => e.target.select()}
         maxLength={1}
-        aria-label={`Keycap ${index + 1} character`}
+        aria-label={th.keycapRow.keycapCharacter(index)}
         className="w-10 h-10 rounded-md border-2 border-neutral-200 bg-white text-center text-lg font-bold uppercase focus:border-pink-500 focus:outline-none"
       />
       <div className="flex items-center gap-1">
@@ -63,21 +64,21 @@ export function KeycapRow({
           value={keycap.keycapColor}
           onChange={onKeycapColor}
           swatches={KEYCAP_PALETTE}
-          label="Keycap"
+          label={th.controls.keycap}
           size="sm"
         />
         <ColorPicker
           value={keycap.letterColor}
           onChange={onLetterColor}
           swatches={LETTER_PALETTE}
-          label="Letter"
+          label={th.controls.letter}
           size="sm"
         />
       </div>
       <button
         type="button"
         onClick={onReset}
-        aria-label={`Reset keycap ${index + 1} to defaults`}
+        aria-label={th.keycapRow.resetKeycap(index)}
         className="ml-auto rounded-md p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
       >
         <RotateCcw className="size-4" />

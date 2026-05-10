@@ -1,33 +1,35 @@
+import { th } from "@/lib/i18n/th";
+
 /** Swatches matched to physical PLA keycap filaments (pastel pink, yellow, cyan, white, mint, lavender). */
 export const BASE_PALETTE: { name: string; hex: string }[] = [
-  { name: "Pastel Pink", hex: "#f2b5c8" },
-  { name: "Yellow", hex: "#ffe24a" },
-  { name: "Cyan", hex: "#2ec4e6" },
-  { name: "White", hex: "#ffffff" },
-  { name: "Mint", hex: "#b5e8c9" },
-  { name: "Lavender", hex: "#c5b3e8" },
-  { name: "Charcoal", hex: "#2a2a2a" },
+  { name: th.palette.pastelPink, hex: "#f2b5c8" },
+  { name: th.palette.yellow, hex: "#ffe24a" },
+  { name: th.palette.cyan, hex: "#2ec4e6" },
+  { name: th.palette.white, hex: "#ffffff" },
+  { name: th.palette.mint, hex: "#b5e8c9" },
+  { name: th.palette.lavender, hex: "#c5b3e8" },
+  { name: th.palette.charcoal, hex: "#2a2a2a" },
 ];
 
 export const KEYCAP_PALETTE: { name: string; hex: string }[] = [
-  { name: "Pastel Pink", hex: "#f2b5c8" },
-  { name: "Yellow", hex: "#ffe24a" },
-  { name: "Cyan", hex: "#2ec4e6" },
-  { name: "White", hex: "#ffffff" },
-  { name: "Mint", hex: "#b5e8c9" },
-  { name: "Lavender", hex: "#c5b3e8" },
-  { name: "Charcoal", hex: "#2a2a2a" },
+  { name: th.palette.pastelPink, hex: "#f2b5c8" },
+  { name: th.palette.yellow, hex: "#ffe24a" },
+  { name: th.palette.cyan, hex: "#2ec4e6" },
+  { name: th.palette.white, hex: "#ffffff" },
+  { name: th.palette.mint, hex: "#b5e8c9" },
+  { name: th.palette.lavender, hex: "#c5b3e8" },
+  { name: th.palette.charcoal, hex: "#2a2a2a" },
 ];
 
 export const LETTER_PALETTE: { name: string; hex: string }[] = [
-  { name: "Hot Pink", hex: "#e91e63" },
-  { name: "Cobalt", hex: "#1e6cd8" },
-  { name: "Forest", hex: "#2a7d4f" },
-  { name: "Tangerine", hex: "#e8772a" },
-  { name: "Plum", hex: "#7d3aa8" },
-  { name: "Sun", hex: "#e8b62a" },
-  { name: "White", hex: "#ffffff" },
-  { name: "Charcoal", hex: "#2a2a2a" },
+  { name: th.palette.hotPink, hex: "#e91e63" },
+  { name: th.palette.cobalt, hex: "#1e6cd8" },
+  { name: th.palette.forest, hex: "#2a7d4f" },
+  { name: th.palette.tangerine, hex: "#e8772a" },
+  { name: th.palette.plum, hex: "#7d3aa8" },
+  { name: th.palette.sun, hex: "#e8b62a" },
+  { name: th.palette.white, hex: "#ffffff" },
+  { name: th.palette.charcoal, hex: "#2a2a2a" },
 ];
 
 export function isValidHex(s: string): boolean {

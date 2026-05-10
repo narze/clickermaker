@@ -1,6 +1,7 @@
 "use client"
 import { useCallback, useRef, useState } from "react"
 import { useDesign } from "@/lib/use-design"
+import { th } from "@/lib/i18n/th"
 import { ClickerScene, type ExportFn } from "./clicker-scene"
 import { ControlsPanel } from "./controls-panel"
 
@@ -47,7 +48,7 @@ export function Designer() {
           onUserInteract={stopIdle}
         />
         <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-widest text-neutral-400">
-          drag to rotate · click a keycap to edit
+          {th.designer.hint}
         </p>
       </div>
       <ControlsPanel

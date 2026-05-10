@@ -1,4 +1,5 @@
 import { Designer } from "@/components/designer"
+import { th } from "@/lib/i18n/th"
 
 export default function Page() {
   const shopUrl = process.env.NEXT_PUBLIC_SHOP_URL || "#"
@@ -10,11 +11,10 @@ export default function Page() {
           GeekCraft
         </p>
         <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-neutral-900 sm:text-4xl">
-          Clicker Maker
+          {th.page.title}
         </h1>
         <p className="mt-2 text-sm text-neutral-500 sm:text-base">
-          Design your own custom clicker fidget toy. Type, pick colors, save the
-          image, then order it 3D-printed.
+          {th.page.description}
         </p>
       </header>
 
@@ -27,7 +27,7 @@ export default function Page() {
           rel="noreferrer"
           className="font-medium text-neutral-500 underline-offset-2 hover:text-pink-500 hover:underline"
         >
-          by GeekCraft
+          {th.page.by}
         </a>
       </footer>
     </main>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { th } from "@/lib/i18n/th";
 import { cn } from "@/lib/utils";
 import { isValidHex, normalizeHex } from "@/lib/palette";
 
@@ -45,7 +46,7 @@ export function ColorPicker({
     <div ref={containerRef} className="relative inline-block">
       <button
         type="button"
-        aria-label={label ? `${label} — ${value}` : `Color ${value}`}
+        aria-label={label ? `${label} — ${value}` : th.colorPicker.colorValue(value)}
         onClick={() => setOpen((o) => !o)}
         className={cn(
           triggerSize,
