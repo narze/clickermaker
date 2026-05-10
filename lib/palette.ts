@@ -21,16 +21,7 @@ export const KEYCAP_PALETTE: { name: string; hex: string }[] = [
   { name: th.palette.charcoal, hex: "#2a2a2a" },
 ];
 
-export const LETTER_PALETTE: { name: string; hex: string }[] = [
-  { name: th.palette.hotPink, hex: "#e91e63" },
-  { name: th.palette.cobalt, hex: "#1e6cd8" },
-  { name: th.palette.forest, hex: "#2a7d4f" },
-  { name: th.palette.tangerine, hex: "#e8772a" },
-  { name: th.palette.plum, hex: "#7d3aa8" },
-  { name: th.palette.sun, hex: "#e8b62a" },
-  { name: th.palette.white, hex: "#ffffff" },
-  { name: th.palette.charcoal, hex: "#2a2a2a" },
-];
+export const LETTER_PALETTE = KEYCAP_PALETTE;
 
 export function isValidHex(s: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(s);

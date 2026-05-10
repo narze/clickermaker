@@ -26,15 +26,15 @@ export const MIN_KEYCAPS = 1;
 
 export const DEFAULTS: Design = {
   keycaps: [
-    { char: "N", keycapColor: "#ffffff", letterColor: "#e91e63" },
-    { char: "A", keycapColor: "#ffffff", letterColor: "#e91e63" },
-    { char: "M", keycapColor: "#ffffff", letterColor: "#e91e63" },
-    { char: "E", keycapColor: "#ffffff", letterColor: "#e91e63" },
+    { char: "N", keycapColor: "#ffffff", letterColor: "#2a2a2a" },
+    { char: "A", keycapColor: "#ffffff", letterColor: "#2a2a2a" },
+    { char: "M", keycapColor: "#ffffff", letterColor: "#2a2a2a" },
+    { char: "E", keycapColor: "#ffffff", letterColor: "#2a2a2a" },
   ],
   baseColor: "#f2b5c8",
   font: "baloo2",
   defaultKeycapColor: "#ffffff",
-  defaultLetterColor: "#e91e63",
+  defaultLetterColor: "#2a2a2a",
 };
 
 export function sanitizeChar(s: string): string {
