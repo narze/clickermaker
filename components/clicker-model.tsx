@@ -292,6 +292,7 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
     const buttonTravel = Math.max(0, KEYCAP_H - WALL_H);
     const capTravel = KEYCAP_H * KEYCAP_WAVE_PRESS_RATIO;
     const waveStartMsRef = useRef<number | null>(null);
+    const handledWaveRequestIdRef = useRef(0);
     const pendingWaveRef = useRef<WaveRequest | null>(null);
     const pendingWaveDeadlineRef = useRef<number | null>(null);
     const movingKeyRefs = useRef<Array<THREE.Group | null>>([]);
@@ -346,7 +347,8 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
     }, [expectedGlyphKeys]);
 
     useEffect(() => {
-      if (waveRequest.id <= 0) return;
+      if (waveRequest.id <= 0 || waveRequest.id === handledWaveRequestIdRef.current) return;
+      handledWaveRequestIdRef.current = waveRequest.id;
 
       waveStartMsRef.current = null;
       applyRestPose();
