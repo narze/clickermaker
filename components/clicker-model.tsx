@@ -200,7 +200,13 @@ function ExtrudedLetter({
       geometry={geometry}
       castShadow
     >
-      <meshStandardMaterial color={color} roughness={0.4} metalness={0.05} toneMapped={false} />
+      <meshStandardMaterial
+        color={color}
+        roughness={0.52}
+        metalness={0.02}
+        emissive={color}
+        emissiveIntensity={0.14}
+      />
     </mesh>
   );
 }

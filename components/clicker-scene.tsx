@@ -79,7 +79,12 @@ export function ClickerScene({
     <Canvas
       shadows
       dpr={[1, 2]}
-      gl={{ preserveDrawingBuffer: true, antialias: true }}
+      gl={{
+        preserveDrawingBuffer: true,
+        antialias: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 0.78,
+      }}
       onPointerDown={onUserInteract}
       onWheel={onUserInteract}
       camera={{ position: [0, 3.5, 7], fov: 32 }}
@@ -87,15 +92,15 @@ export function ClickerScene({
       <color attach="background" args={["#fafafa"]} />
       <PerspectiveCamera makeDefault position={[0, 3.5, 7]} fov={32} />
 
-      <ambientLight intensity={0.35} />
+      <ambientLight intensity={0.2} />
       <directionalLight
         position={[4, 8, 6]}
-        intensity={1.1}
+        intensity={0.72}
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       />
-      <directionalLight position={[-4, 4, -3]} intensity={0.45} />
+      <directionalLight position={[-4, 4, -3]} intensity={0.22} />
 
       <Suspense fallback={null}>
         <Environment preset="studio" background={false} />
@@ -125,19 +130,9 @@ export function ClickerScene({
       <IdleSpin active={idle} />
       <ExportBridge exportRef={exportRef} />
       <fog attach="fog" args={["#fafafa", 14, 30]} />
-      <SceneTuning />
       <CameraFit keycapCount={design.keycaps.length} />
     </Canvas>
   );
-}
-
-function SceneTuning() {
-  const { gl } = useThree();
-  useEffect(() => {
-    gl.toneMapping = THREE.ACESFilmicToneMapping;
-    gl.toneMappingExposure = 1.05;
-  }, [gl]);
-  return null;
 }
 
 // Widens vFOV on portrait/narrow viewports so the full model stays visible.

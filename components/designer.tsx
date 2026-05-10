@@ -47,9 +47,14 @@ export function Designer() {
           idle={idle}
           onUserInteract={stopIdle}
         />
-        <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-widest text-neutral-400">
-          {th.designer.hint}
-        </p>
+        <div className="pointer-events-none absolute bottom-3 left-1/2 flex w-full max-w-md -translate-x-1/2 flex-col items-center gap-1 px-4 text-center">
+          <p className="text-[11px] uppercase tracking-widest text-neutral-400">
+            {th.designer.hint}
+          </p>
+          <p className="text-[11px] leading-relaxed text-neutral-500/90">
+            {th.designer.disclaimer}
+          </p>
+        </div>
       </div>
       <ControlsPanel
         design={d.design}
