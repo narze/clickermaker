@@ -1,9 +1,9 @@
 "use client";
-import { Download, Minus, Plus, RefreshCw } from "lucide-react";
+import { Download, Minus, Plus, RefreshCw, Shuffle } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Design, FontId } from "@/lib/types";
 import { FONTS, MAX_KEYCAPS, MIN_KEYCAPS, sanitizeWord } from "@/lib/types";
-import { BASE_PALETTE, KEYCAP_PALETTE, LETTER_PALETTE } from "@/lib/palette";
+import { BASE_PALETTE, KEYCAP_PALETTE, LETTER_PALETTE, getPaletteColorName } from "@/lib/palette";
 import { th } from "@/lib/i18n/th";
 import { cn } from "@/lib/utils";
 import { ColorPicker } from "./color-picker";
@@ -24,6 +24,7 @@ export function ControlsPanel({
   onSetDefaultKeycapColor,
   onSetDefaultLetterColor,
   onApplyDefaultsToAll,
+  onRandomizeColors,
   onSetFont,
   onReset,
   onSaveImage,
@@ -42,6 +43,7 @@ export function ControlsPanel({
   onSetDefaultKeycapColor: (c: string) => void;
   onSetDefaultLetterColor: (c: string) => void;
   onApplyDefaultsToAll: () => void;
+  onRandomizeColors: () => void;
   onSetFont: (f: FontId) => void;
   onReset: () => void;
   onSaveImage: () => void;
@@ -126,8 +128,8 @@ export function ControlsPanel({
             swatches={BASE_PALETTE}
             label={th.controls.base}
           />
-          <span className="font-mono text-xs uppercase text-neutral-500">
-            {design.baseColor}
+          <span className="text-xs text-neutral-500">
+            {getPaletteColorName(BASE_PALETTE, design.baseColor)}
           </span>
         </div>
       </Section>
@@ -159,9 +161,17 @@ export function ControlsPanel({
           <button
             type="button"
             onClick={onApplyDefaultsToAll}
-            className="ml-auto rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-neutral-50"
+            className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-neutral-50"
           >
             {th.controls.applyToAll}
+          </button>
+          <button
+            type="button"
+            onClick={onRandomizeColors}
+            className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-neutral-50"
+          >
+            <Shuffle className="size-3.5" />
+            {th.controls.randomColors}
           </button>
         </div>
       </Section>

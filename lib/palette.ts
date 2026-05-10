@@ -23,6 +23,14 @@ export const KEYCAP_PALETTE: { name: string; hex: string }[] = [
 
 export const LETTER_PALETTE = KEYCAP_PALETTE;
 
+export function getPaletteColorName(
+  swatches: { name: string; hex: string }[],
+  hex: string,
+): string {
+  const match = swatches.find((swatch) => swatch.hex.toLowerCase() === hex.toLowerCase());
+  return match?.name ?? hex.toUpperCase();
+}
+
 export function isValidHex(s: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(s);
 }

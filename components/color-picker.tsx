@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { th } from "@/lib/i18n/th";
 import { cn } from "@/lib/utils";
-import { isValidHex, normalizeHex } from "@/lib/palette";
+import { getPaletteColorName } from "@/lib/palette";
 
 export function ColorPicker({
   value,
@@ -18,10 +18,7 @@ export function ColorPicker({
   size?: "sm" | "md";
 }) {
   const [open, setOpen] = useState(false);
-  const [hex, setHex] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => setHex(value), [value]);
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
@@ -41,12 +38,13 @@ export function ColorPicker({
 
   const swatchSize = size === "sm" ? "w-6 h-6" : "w-7 h-7";
   const triggerSize = size === "sm" ? "w-8 h-8" : "w-10 h-10";
+  const colorName = getPaletteColorName(swatches, value);
 
   return (
     <div ref={containerRef} className="relative inline-block">
       <button
         type="button"
-        aria-label={label ? `${label} — ${value}` : th.colorPicker.colorValue(value)}
+        aria-label={label ? `${label} — ${colorName}` : th.colorPicker.colorValue(colorName)}
         onClick={() => setOpen((o) => !o)}
         className={cn(
           triggerSize,
@@ -73,7 +71,6 @@ export function ColorPicker({
                 aria-label={s.name}
                 onClick={() => {
                   onChange(s.hex);
-                  setHex(s.hex);
                   setOpen(false);
                 }}
                 className={cn(
@@ -86,36 +83,7 @@ export function ColorPicker({
               />
             ))}
           </div>
-          <div className="mt-3 flex items-center gap-2">
-            <label className="relative inline-block w-7 h-7 cursor-pointer rounded-md border-2 border-white ring-1 ring-black/10 overflow-hidden">
-              <input
-                type="color"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="absolute inset-0 cursor-pointer opacity-0"
-              />
-              <span
-                className="absolute inset-0"
-                style={{ backgroundColor: value }}
-              />
-            </label>
-            <input
-              type="text"
-              value={hex}
-              maxLength={7}
-              onChange={(e) => {
-                const v = e.target.value;
-                setHex(v);
-                if (isValidHex(v)) onChange(normalizeHex(v));
-              }}
-              onBlur={() => {
-                if (isValidHex(hex)) onChange(normalizeHex(hex));
-                else setHex(value);
-              }}
-              className="flex-1 rounded-md border border-neutral-300 bg-white px-2 py-1 font-mono text-xs uppercase focus:outline-none focus:ring-2 focus:ring-pink-500"
-              placeholder="#ffffff"
-            />
-          </div>
+          <div className="mt-3 text-xs font-medium text-neutral-500">{colorName}</div>
         </div>
       )}
     </div>

@@ -11,6 +11,7 @@ import {
   sanitizeWord,
 } from "./types";
 import { decodeDesign, encodeDesign } from "./url-state";
+import { BASE_PALETTE, KEYCAP_PALETTE, LETTER_PALETTE } from "./palette";
 import { normalizeHex } from "./palette";
 
 type Action =
@@ -25,9 +26,14 @@ type Action =
   | { type: "setDefaultKeycapColor"; color: string }
   | { type: "setDefaultLetterColor"; color: string }
   | { type: "applyDefaultsToAll" }
+  | { type: "randomizeColors" }
   | { type: "setFont"; font: FontId }
   | { type: "loadDesign"; design: Design }
   | { type: "reset" };
+
+function randomItem<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
 
 function makeKeycap(
   char: string,
@@ -108,6 +114,26 @@ function reducer(state: Design, action: Action): Design {
           letterColor: state.defaultLetterColor,
         })),
       };
+    case "randomizeColors": {
+      const baseColor = randomItem(BASE_PALETTE).hex;
+      const keycapColor = randomItem(KEYCAP_PALETTE).hex;
+      const letterChoices = LETTER_PALETTE.filter(
+        (swatch) => swatch.hex.toLowerCase() !== keycapColor.toLowerCase(),
+      );
+      const letterColor = randomItem(letterChoices).hex;
+
+      return {
+        ...state,
+        baseColor,
+        defaultKeycapColor: keycapColor,
+        defaultLetterColor: letterColor,
+        keycaps: state.keycaps.map((keycap) => ({
+          ...keycap,
+          keycapColor,
+          letterColor,
+        })),
+      };
+    }
     case "setFont":
       return { ...state, font: action.font };
     case "loadDesign":
@@ -177,6 +203,7 @@ export function useDesign() {
       [],
     ),
     applyDefaultsToAll: useCallback(() => dispatch({ type: "applyDefaultsToAll" }), []),
+    randomizeColors: useCallback(() => dispatch({ type: "randomizeColors" }), []),
     setFont: useCallback((f: FontId) => dispatch({ type: "setFont", font: f }), []),
     reset: useCallback(() => dispatch({ type: "reset" }), []),
   };

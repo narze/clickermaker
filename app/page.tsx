@@ -2,7 +2,7 @@ import { Designer } from "@/components/designer"
 import { th } from "@/lib/i18n/th"
 
 export default function Page() {
-  const shopUrl = process.env.NEXT_PUBLIC_SHOP_URL || "#"
+  const shopUrl = process.env.NEXT_PUBLIC_SHOP_URL || "https://geekcraft.shop"
 
   return (
     <main className="flex min-h-screen flex-col items-center px-4 py-8 sm:px-6 lg:px-8">

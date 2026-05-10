@@ -71,6 +71,7 @@ export function Designer() {
         onSetDefaultKeycapColor={d.setDefaultKeycapColor}
         onSetDefaultLetterColor={d.setDefaultLetterColor}
         onApplyDefaultsToAll={d.applyDefaultsToAll}
+        onRandomizeColors={d.randomizeColors}
         onSetFont={d.setFont}
         onReset={d.reset}
         onSaveImage={onSaveImage}

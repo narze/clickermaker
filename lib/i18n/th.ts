@@ -3,7 +3,7 @@ export const th = {
     title: "ออกแบบคลิกเกอร์ของคุณ",
     description:
       "พิมพ์คำที่อยากได้ เลือกสี เลือกฟอนต์ แล้วดูตัวอย่างก่อนบันทึกภาพเพื่อสั่งผลิตกับ GeekCraft",
-    by: "สั่งผลิตกับ GeekCraft",
+    by: "GeekCraft",
   },
   metadata: {
     title: "ออกแบบคลิกเกอร์กับ GeekCraft",
@@ -31,6 +31,7 @@ export const th = {
     defaultLetterColor: "สีตัวอักษร",
     keycap: "ปุ่ม",
     letter: "ตัวอักษร",
+    randomColors: "สุ่มสี",
     applyToAll: "ใช้กับทุกปุ่ม",
     perKeycap: "ปรับทีละปุ่ม",
     reset: "เริ่มใหม่",
