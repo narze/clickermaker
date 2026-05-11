@@ -186,7 +186,9 @@ function CameraFit({
     const housingW = isVertical ? crossSpan : primarySpan
     const housingD = isVertical ? primarySpan : CLICKER_BODY_CROSS_DEPTH
     const lanyardStickout = LANYARD_RING_R * 0.75 + CLICKER_LANYARD_EXTRA
-    const modelHalfWidth = Math.max(housingW / 2, housingD / 2 + lanyardStickout)
+    const modelHalfWidth = isVertical
+      ? Math.max(housingW / 2, housingD / 2 + lanyardStickout)
+      : Math.max(housingW / 2 + lanyardStickout, housingD / 2)
     const [camX, camY, camZ] = INITIAL_CAMERA_POSITION
     const camDepth = Math.sqrt(camX * camX + camY * camY + camZ * camZ)
     const minVFov =

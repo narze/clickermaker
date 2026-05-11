@@ -294,7 +294,9 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
     useEffect(() => () => keycapGeo.dispose(), [keycapGeo]);
 
     const frameColor = useMemo(() => darken(design.baseColor, 0.18), [design.baseColor]);
-    const lanyardZ = housingD / 2 + LANYARD_RING_R * 0.4;
+    /* Horizontal: ring on −X (left). Vertical: ring on −Z (same end as key index 0 / “top”). */
+    const lanyardX = -housingW / 2 - LANYARD_RING_R * 0.4;
+    const lanyardZ = -housingD / 2 - LANYARD_RING_R * 0.4;
     const dividerY = FLOOR_H + WALL_H / 2;
     const buttonTravel = Math.max(0, KEYCAP_H - WALL_H);
     const capTravel = KEYCAP_H * KEYCAP_WAVE_PRESS_RATIO;
@@ -389,33 +391,65 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
           <BasePlastic color={design.baseColor} />
         </RoundedBox>
 
-        {/* Lanyard loop on +Z (top edge of tray) */}
-        <mesh
-          position={[0, baseHeight / 2, lanyardZ]}
-          rotation={[Math.PI / 2, 0, 0]}
-          castShadow
-          receiveShadow
-        >
-          <torusGeometry
-            args={[
-              (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
-              (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
-              20,
-              40,
-            ]}
-          />
-          <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
-        </mesh>
-        <RoundedBox
-          position={[0, baseHeight / 2, lanyardZ - LANYARD_RING_R * 0.58]}
-          args={[0.32, 0.12, LANYARD_STEM_W]}
-          radius={0.04}
-          smoothness={4}
-          castShadow
-          receiveShadow
-        >
-          <BasePlastic color={design.baseColor} />
-        </RoundedBox>
+        {isVertical ? (
+          <>
+            <mesh
+              position={[0, baseHeight / 2, lanyardZ]}
+              rotation={[Math.PI / 2, 0, 0]}
+              castShadow
+              receiveShadow
+            >
+              <torusGeometry
+                args={[
+                  (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
+                  (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
+                  20,
+                  40,
+                ]}
+              />
+              <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
+            </mesh>
+            <RoundedBox
+              position={[0, baseHeight / 2, lanyardZ + LANYARD_RING_R * 0.58]}
+              args={[0.32, 0.12, LANYARD_STEM_W]}
+              radius={0.04}
+              smoothness={4}
+              castShadow
+              receiveShadow
+            >
+              <BasePlastic color={design.baseColor} />
+            </RoundedBox>
+          </>
+        ) : (
+          <>
+            <mesh
+              position={[lanyardX, baseHeight / 2, 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+              castShadow
+              receiveShadow
+            >
+              <torusGeometry
+                args={[
+                  (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
+                  (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
+                  20,
+                  40,
+                ]}
+              />
+              <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
+            </mesh>
+            <RoundedBox
+              position={[lanyardX + LANYARD_RING_R * 0.58, baseHeight / 2, 0]}
+              args={[LANYARD_STEM_W, 0.12, 0.32]}
+              radius={0.04}
+              smoothness={4}
+              castShadow
+              receiveShadow
+            >
+              <BasePlastic color={design.baseColor} />
+            </RoundedBox>
+          </>
+        )}
 
         {/* Tray floor tint */}
         <RoundedBox
