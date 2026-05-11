@@ -4,6 +4,7 @@ import {
   type Design,
   type Keycap,
   type FontId,
+  type KeyLayout,
   DEFAULTS,
   MAX_KEYCAPS,
   MIN_KEYCAPS,
@@ -28,6 +29,7 @@ type Action =
   | { type: "applyDefaultsToAll" }
   | { type: "randomizeColors" }
   | { type: "setFont"; font: FontId }
+  | { type: "setKeyLayout"; keyLayout: KeyLayout }
   | { type: "loadDesign"; design: Design }
   | { type: "reset" };
 
@@ -136,6 +138,8 @@ function reducer(state: Design, action: Action): Design {
     }
     case "setFont":
       return { ...state, font: action.font };
+    case "setKeyLayout":
+      return { ...state, keyLayout: action.keyLayout };
     case "loadDesign":
       return action.design;
     case "reset":
@@ -207,6 +211,10 @@ export function useDesign() {
     applyDefaultsToAll: useCallback(() => dispatch({ type: "applyDefaultsToAll" }), []),
     randomizeColors: useCallback(() => dispatch({ type: "randomizeColors" }), []),
     setFont: useCallback((f: FontId) => dispatch({ type: "setFont", font: f }), []),
+    setKeyLayout: useCallback(
+      (keyLayout: KeyLayout) => dispatch({ type: "setKeyLayout", keyLayout }),
+      [],
+    ),
     reset: useCallback(() => dispatch({ type: "reset" }), []),
   };
 

@@ -23,6 +23,7 @@ export function Designer() {
     resetKeycap,
     setBaseColor,
     setFont,
+    setKeyLayout,
     setKeycapChar,
     setKeycapColor,
     setLetterColor,
@@ -150,6 +151,14 @@ export function Designer() {
     [setFont, waveController],
   )
 
+  const onSetKeyLayout = useCallback(
+    (layout: Parameters<typeof setKeyLayout>[0]) => {
+      setKeyLayout(layout)
+      waveController.triggerVisibleEdit(false)
+    },
+    [setKeyLayout, waveController],
+  )
+
   const onSaveImage = useCallback(() => {
     const fn = exportRef.current
     if (!fn) return
@@ -202,6 +211,7 @@ export function Designer() {
         onApplyDefaultsToAll={onApplyDefaultsToAll}
         onRandomizeColors={onRandomizeColors}
         onSetFont={onSetFont}
+        onSetKeyLayout={onSetKeyLayout}
         onReset={onReset}
         onSaveImage={onSaveImage}
       />

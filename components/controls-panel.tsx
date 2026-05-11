@@ -1,6 +1,6 @@
 "use client";
 import { Download, Minus, Plus, RefreshCw, Shuffle } from "lucide-react";
-import type { Design, FontId } from "@/lib/types";
+import type { Design, FontId, KeyLayout } from "@/lib/types";
 import { FONTS, MAX_KEYCAPS, MIN_KEYCAPS, sanitizeWord } from "@/lib/types";
 import { BASE_PALETTE, KEYCAP_PALETTE, LETTER_PALETTE, getPaletteColorName } from "@/lib/palette";
 import { th } from "@/lib/i18n/th";
@@ -25,6 +25,7 @@ export function ControlsPanel({
   onApplyDefaultsToAll,
   onRandomizeColors,
   onSetFont,
+  onSetKeyLayout,
   onReset,
   onSaveImage,
 }: {
@@ -44,6 +45,7 @@ export function ControlsPanel({
   onApplyDefaultsToAll: () => void;
   onRandomizeColors: () => void;
   onSetFont: (f: FontId) => void;
+  onSetKeyLayout: (layout: KeyLayout) => void;
   onReset: () => void;
   onSaveImage: () => void;
 }) {
@@ -111,6 +113,36 @@ export function ControlsPanel({
               {f.label}
             </button>
           ))}
+        </div>
+      </Section>
+
+      {/* Key orientation */}
+      <Section title={th.controls.keyLayout}>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => onSetKeyLayout("horizontal")}
+            className={cn(
+              "rounded-lg border-2 px-3 py-2 text-sm transition",
+              design.keyLayout === "horizontal"
+                ? "border-pink-500 bg-pink-50 font-bold text-pink-700"
+                : "border-neutral-200 bg-white hover:border-neutral-400",
+            )}
+          >
+            {th.controls.keyLayoutHorizontal}
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetKeyLayout("vertical")}
+            className={cn(
+              "rounded-lg border-2 px-3 py-2 text-sm transition",
+              design.keyLayout === "vertical"
+                ? "border-pink-500 bg-pink-50 font-bold text-pink-700"
+                : "border-neutral-200 bg-white hover:border-neutral-400",
+            )}
+          >
+            {th.controls.keyLayoutVertical}
+          </button>
         </div>
       </Section>
 

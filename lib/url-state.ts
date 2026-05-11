@@ -1,5 +1,6 @@
 import {
   type Design,
+  type KeyLayout,
   DEFAULTS,
   FONTS,
   MAX_KEYCAPS,
@@ -18,13 +19,21 @@ function b64urlDecode(s: string): string {
 }
 
 export function encodeDesign(d: Design): string {
-  const compact = {
+  const compact: {
+    k: [string, string, string][];
+    b: string;
+    f: string;
+    dk: string;
+    dl: string;
+    kl?: 1;
+  } = {
     k: d.keycaps.map((k) => [k.char, k.keycapColor, k.letterColor]),
     b: d.baseColor,
     f: d.font,
     dk: d.defaultKeycapColor,
     dl: d.defaultLetterColor,
   };
+  if (d.keyLayout === "vertical") compact.kl = 1;
   return b64urlEncode(JSON.stringify(compact));
 }
 
@@ -36,6 +45,7 @@ export function decodeDesign(s: string): Design | null {
       f?: string;
       dk?: string;
       dl?: string;
+      kl?: number;
     };
     if (!obj || !Array.isArray(obj.k)) return null;
     const keycaps = obj.k
@@ -53,6 +63,8 @@ export function decodeDesign(s: string): Design | null {
       ? (obj.f as FontId)
       : DEFAULTS.font;
 
+    const keyLayout: KeyLayout = obj.kl === 1 ? "vertical" : "horizontal";
+
     return {
       keycaps,
       baseColor: isValidHex(obj.b ?? "") ? normalizeHex(obj.b!) : DEFAULTS.baseColor,
@@ -63,6 +75,7 @@ export function decodeDesign(s: string): Design | null {
       defaultLetterColor: isValidHex(obj.dl ?? "")
         ? normalizeHex(obj.dl!)
         : DEFAULTS.defaultLetterColor,
+      keyLayout,
     };
   } catch {
     return null;
