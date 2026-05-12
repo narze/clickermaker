@@ -5,6 +5,7 @@ import {
   type DesignerWaveController,
 } from "@/lib/designer-wave"
 import type { WaveRequest } from "@/lib/keycap-wave"
+import { compositeExportPngWithFooter } from "@/lib/export-image-with-footer"
 import { useDesign } from "@/lib/use-design"
 import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion"
 import { th } from "@/lib/i18n/th"
@@ -162,16 +163,23 @@ export function Designer() {
   const onSaveImage = useCallback(() => {
     const fn = exportRef.current
     if (!fn) return
-    const url = fn()
-    if (!url) return
+    const raw = fn()
+    if (!raw) return
     const word = d.word.replace(/[^A-Z0-9]/gi, "") || "geekcraft"
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `clicker-${word.toLowerCase()}.png`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-  }, [d.word])
+    const download = (href: string) => {
+      const a = document.createElement("a")
+      a.href = href
+      a.download = `clicker-${word.toLowerCase()}.png`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
+    void compositeExportPngWithFooter(raw, d.design, {
+      whenUnknownColor: th.palette.notInSwatches,
+      fontPrefix: th.exportImage.fontPrefix,
+      colorsPrefix: th.exportImage.colorsPrefix,
+    }).then((composed) => download(composed ?? raw))
+  }, [d.word, d.design])
 
   return (
     <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[1fr_22rem]">
