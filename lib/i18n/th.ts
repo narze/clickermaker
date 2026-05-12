@@ -61,5 +61,10 @@ export const th = {
     forest: "เขียวเข้ม",
     tangerine: "ส้มสด",
     plum: "พลัม",
+    notInSwatches: "สีนอกชุดตัวอย่าง",
+  },
+  exportImage: {
+    fontPrefix: "ฟอนต์",
+    colorsPrefix: "สี",
   },
 } as const

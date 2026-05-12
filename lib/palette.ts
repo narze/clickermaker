@@ -33,6 +33,18 @@ export function getPaletteColorName(
   return match?.name ?? hex.toUpperCase()
 }
 
+/** Swatch `name` when `hex` matches the palette; otherwise `whenUnknown` (no hex). */
+export function getPaletteDisplayName(
+  swatches: { name: string; hex: string }[],
+  hex: string,
+  whenUnknown: string
+): string {
+  const match = swatches.find(
+    (swatch) => swatch.hex.toLowerCase() === hex.toLowerCase()
+  )
+  return match?.name ?? whenUnknown
+}
+
 export function isValidHex(s: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(s)
 }
