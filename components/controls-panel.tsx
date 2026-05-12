@@ -1,12 +1,17 @@
-"use client";
-import { Download, Minus, Plus, RefreshCw, Shuffle } from "lucide-react";
-import type { Design, FontId, KeyLayout } from "@/lib/types";
-import { FONTS, MAX_KEYCAPS, MIN_KEYCAPS, sanitizeWord } from "@/lib/types";
-import { BASE_PALETTE, KEYCAP_PALETTE, LETTER_PALETTE, getPaletteColorName } from "@/lib/palette";
-import { th } from "@/lib/i18n/th";
-import { cn } from "@/lib/utils";
-import { ColorPicker } from "./color-picker";
-import { KeycapRow } from "./keycap-row";
+"use client"
+import { Download, Minus, Plus, RefreshCw, Shuffle } from "lucide-react"
+import type { Design, FontId, KeyLayout } from "@/lib/types"
+import { FONTS, MAX_KEYCAPS, MIN_KEYCAPS, sanitizeWord } from "@/lib/types"
+import {
+  BASE_PALETTE,
+  KEYCAP_PALETTE,
+  LETTER_PALETTE,
+  getPaletteColorName,
+} from "@/lib/palette"
+import { th } from "@/lib/i18n/th"
+import { cn } from "@/lib/utils"
+import { ColorPicker } from "./color-picker"
+import { KeycapRow } from "./keycap-row"
 
 export function ControlsPanel({
   design,
@@ -29,27 +34,27 @@ export function ControlsPanel({
   onReset,
   onSaveImage,
 }: {
-  design: Design;
-  word: string;
-  highlightedIndex: number | null;
-  onSetWord: (w: string) => void;
-  onSetKeycapChar: (i: number, c: string) => void;
-  onSetKeycapColor: (i: number, c: string) => void;
-  onSetLetterColor: (i: number, c: string) => void;
-  onResetKeycap: (i: number) => void;
-  onAddKeycap: () => void;
-  onRemoveKeycap: () => void;
-  onSetBaseColor: (c: string) => void;
-  onSetDefaultKeycapColor: (c: string) => void;
-  onSetDefaultLetterColor: (c: string) => void;
-  onApplyDefaultsToAll: () => void;
-  onRandomizeColors: () => void;
-  onSetFont: (f: FontId) => void;
-  onSetKeyLayout: (layout: KeyLayout) => void;
-  onReset: () => void;
-  onSaveImage: () => void;
+  design: Design
+  word: string
+  highlightedIndex: number | null
+  onSetWord: (w: string) => void
+  onSetKeycapChar: (i: number, c: string) => void
+  onSetKeycapColor: (i: number, c: string) => void
+  onSetLetterColor: (i: number, c: string) => void
+  onResetKeycap: (i: number) => void
+  onAddKeycap: () => void
+  onRemoveKeycap: () => void
+  onSetBaseColor: (c: string) => void
+  onSetDefaultKeycapColor: (c: string) => void
+  onSetDefaultLetterColor: (c: string) => void
+  onApplyDefaultsToAll: () => void
+  onRandomizeColors: () => void
+  onSetFont: (f: FontId) => void
+  onSetKeyLayout: (layout: KeyLayout) => void
+  onReset: () => void
+  onSaveImage: () => void
 }) {
-  const n = design.keycaps.length;
+  const n = design.keycaps.length
 
   return (
     <aside className="flex flex-col gap-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 lg:max-h-[80vh] lg:overflow-y-auto">
@@ -62,8 +67,8 @@ export function ControlsPanel({
             placeholder={th.controls.typeWord}
             maxLength={MAX_KEYCAPS}
             onChange={(e) => {
-              const v = sanitizeWord(e.target.value);
-              onSetWord(v);
+              const v = sanitizeWord(e.target.value)
+              onSetWord(v)
             }}
             className="w-full rounded-lg border-2 border-neutral-200 bg-white px-3 py-2 text-lg font-bold uppercase tracking-wider focus:border-pink-500 focus:outline-none"
           />
@@ -174,7 +179,9 @@ export function ControlsPanel({
               swatches={KEYCAP_PALETTE}
               label={th.controls.defaultKeycapColor}
             />
-            <span className="text-xs text-neutral-500">{th.controls.keycap}</span>
+            <span className="text-xs text-neutral-500">
+              {th.controls.keycap}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <ColorPicker
@@ -183,7 +190,9 @@ export function ControlsPanel({
               swatches={LETTER_PALETTE}
               label={th.controls.defaultLetterColor}
             />
-            <span className="text-xs text-neutral-500">{th.controls.letter}</span>
+            <span className="text-xs text-neutral-500">
+              {th.controls.letter}
+            </span>
           </div>
           <button
             type="button"
@@ -234,14 +243,14 @@ export function ControlsPanel({
         <button
           type="button"
           onClick={onSaveImage}
-          className="ml-auto flex items-center gap-1.5 rounded-lg bg-pink-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
+          className="flex items-center gap-1.5 rounded-lg bg-pink-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
         >
           <Download className="size-4" />
           {th.controls.saveImage}
         </button>
       </div>
     </aside>
-  );
+  )
 }
 
 function Section({
@@ -249,9 +258,9 @@ function Section({
   subtitle,
   children,
 }: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
+  title: string
+  subtitle?: string
+  children: React.ReactNode
 }) {
   return (
     <section>
@@ -263,5 +272,5 @@ function Section({
       )}
       {children}
     </section>
-  );
+  )
 }
