@@ -20,6 +20,11 @@ import {
   createKeycapWaveRuntime,
   type KeycapWaveRuntime,
 } from "@/lib/keycap-wave-runtime";
+import {
+  CLICKER_BASE_PAD,
+  CLICKER_BODY_CROSS_DEPTH,
+  CLICKER_KEYCAP_SPACING,
+} from "@/lib/clicker-layout";
 import type { Design } from "@/lib/types";
 import { FONTS } from "@/lib/types";
 import type { Font } from "opentype.js";
@@ -27,9 +32,6 @@ import type { Font } from "opentype.js";
 const KEYCAP_W = 0.88;
 const KEYCAP_D = 0.88;
 const KEYCAP_H = 0.62;
-const KEYCAP_SPACING = 0.94;
-const BASE_DEPTH = 1.22;
-const BASE_PAD = 0.22;
 const FLOOR_H = 0.2;
 const WALL_H = 0.24;
 const DIVIDER_T = 0.11;
@@ -264,7 +266,11 @@ type ClickerModelProps = {
 export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
   function ClickerModel({ design, onKeycapClick, highlightedIndex, waveRequest }, ref) {
     const n = design.keycaps.length;
-    const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2;
+    const isVertical = design.keyLayout === "vertical";
+    const primarySpan = n * CLICKER_KEYCAP_SPACING + CLICKER_BASE_PAD * 2;
+    const crossSpan = CLICKER_KEYCAP_SPACING + CLICKER_BASE_PAD * 2;
+    const housingW = isVertical ? crossSpan : primarySpan;
+    const housingD = isVertical ? primarySpan : CLICKER_BODY_CROSS_DEPTH;
     const baseHeight = FLOOR_H + WALL_H;
     const keycapBottomY = FLOOR_H;
     const keycapCenterY = keycapBottomY + KEYCAP_H / 2;
@@ -288,7 +294,9 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
     useEffect(() => () => keycapGeo.dispose(), [keycapGeo]);
 
     const frameColor = useMemo(() => darken(design.baseColor, 0.18), [design.baseColor]);
-    const lanyardX = -baseWidth / 2 - LANYARD_RING_R * 0.4;
+    /* Horizontal: ring on −X (left). Vertical: ring on −Z (same end as key index 0 / “top”). */
+    const lanyardX = -housingW / 2 - LANYARD_RING_R * 0.4;
+    const lanyardZ = -housingD / 2 - LANYARD_RING_R * 0.4;
     const dividerY = FLOOR_H + WALL_H / 2;
     const buttonTravel = Math.max(0, KEYCAP_H - WALL_H);
     const capTravel = KEYCAP_H * KEYCAP_WAVE_PRESS_RATIO;
@@ -335,7 +343,7 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
 
     useEffect(() => {
       applyRestPose();
-    }, [applyRestPose, n]);
+    }, [applyRestPose, n, design.keyLayout]);
 
     useImperativeHandle(
       ref,
@@ -374,7 +382,7 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
         {/* Single-piece housing */}
         <RoundedBox
           position={[0, baseHeight / 2, 0]}
-          args={[baseWidth, baseHeight, BASE_DEPTH]}
+          args={[housingW, baseHeight, housingD]}
           radius={0.1}
           smoothness={5}
           castShadow
@@ -383,38 +391,70 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
           <BasePlastic color={design.baseColor} />
         </RoundedBox>
 
-        {/* Lanyard loop */}
-        <mesh
-          position={[lanyardX, baseHeight / 2, 0]}
-          rotation={[Math.PI / 2, 0, 0]}
-          castShadow
-          receiveShadow
-        >
-          <torusGeometry
-            args={[
-              (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
-              (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
-              20,
-              40,
-            ]}
-          />
-          <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
-        </mesh>
-        <RoundedBox
-          position={[lanyardX + LANYARD_RING_R * 0.58, baseHeight / 2, 0]}
-          args={[LANYARD_STEM_W, 0.12, 0.32]}
-          radius={0.04}
-          smoothness={4}
-          castShadow
-          receiveShadow
-        >
-          <BasePlastic color={design.baseColor} />
-        </RoundedBox>
+        {isVertical ? (
+          <>
+            <mesh
+              position={[0, baseHeight / 2, lanyardZ]}
+              rotation={[Math.PI / 2, 0, 0]}
+              castShadow
+              receiveShadow
+            >
+              <torusGeometry
+                args={[
+                  (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
+                  (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
+                  20,
+                  40,
+                ]}
+              />
+              <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
+            </mesh>
+            <RoundedBox
+              position={[0, baseHeight / 2, lanyardZ + LANYARD_RING_R * 0.58]}
+              args={[0.32, 0.12, LANYARD_STEM_W]}
+              radius={0.04}
+              smoothness={4}
+              castShadow
+              receiveShadow
+            >
+              <BasePlastic color={design.baseColor} />
+            </RoundedBox>
+          </>
+        ) : (
+          <>
+            <mesh
+              position={[lanyardX, baseHeight / 2, 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+              castShadow
+              receiveShadow
+            >
+              <torusGeometry
+                args={[
+                  (LANYARD_RING_R + LANYARD_HOLE_R) / 2,
+                  (LANYARD_RING_R - LANYARD_HOLE_R) / 2,
+                  20,
+                  40,
+                ]}
+              />
+              <meshStandardMaterial color={design.baseColor} roughness={0.66} metalness={0.03} />
+            </mesh>
+            <RoundedBox
+              position={[lanyardX + LANYARD_RING_R * 0.58, baseHeight / 2, 0]}
+              args={[LANYARD_STEM_W, 0.12, 0.32]}
+              radius={0.04}
+              smoothness={4}
+              castShadow
+              receiveShadow
+            >
+              <BasePlastic color={design.baseColor} />
+            </RoundedBox>
+          </>
+        )}
 
         {/* Tray floor tint */}
         <RoundedBox
           position={[0, FLOOR_H + 0.012, 0]}
-          args={[baseWidth - INNER_INSET * 2, 0.024, BASE_DEPTH - INNER_INSET * 2]}
+          args={[housingW - INNER_INSET * 2, 0.024, housingD - INNER_INSET * 2]}
           radius={0.04}
           smoothness={4}
           receiveShadow
@@ -424,12 +464,25 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
 
         {/* Dividers */}
         {Array.from({ length: Math.max(0, n - 1) }).map((_, i) => {
-          const dividerX = (i - (n - 2) / 2) * KEYCAP_SPACING + KEYCAP_SPACING / 2;
-          return (
+          const dividerOffset =
+            (i - (n - 2) / 2) * CLICKER_KEYCAP_SPACING + CLICKER_KEYCAP_SPACING / 2;
+          return isVertical ? (
             <RoundedBox
               key={`divider-${i}`}
-              position={[dividerX, dividerY, 0]}
-              args={[DIVIDER_T, WALL_H, BASE_DEPTH - INNER_INSET * 2.1]}
+              position={[0, dividerY, dividerOffset]}
+              args={[housingW - INNER_INSET * 2.1, WALL_H, DIVIDER_T]}
+              radius={0.05}
+              smoothness={4}
+              castShadow
+              receiveShadow
+            >
+              <BasePlastic color={design.baseColor} />
+            </RoundedBox>
+          ) : (
+            <RoundedBox
+              key={`divider-${i}`}
+              position={[dividerOffset, dividerY, 0]}
+              args={[DIVIDER_T, WALL_H, housingD - INNER_INSET * 2.1]}
               radius={0.05}
               smoothness={4}
               castShadow
@@ -442,14 +495,16 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
 
         {/* Keycaps + letters */}
         {design.keycaps.map((kc, i) => {
-          const x = (i - (n - 1) / 2) * KEYCAP_SPACING;
+          const slot = (i - (n - 1) / 2) * CLICKER_KEYCAP_SPACING;
+          const x = isVertical ? 0 : slot;
+          const z = isVertical ? slot : 0;
           const isHighlighted = highlightedIndex === i;
           const glyphKey = `${i}:${fontUrl}:${sizeScale}:${kc.char}`;
 
           return (
             <group key={i}>
               <mesh
-                position={[x, FLOOR_H + 0.014, 0]}
+                position={[x, FLOOR_H + 0.014, z]}
                 rotation={[-Math.PI / 2, 0, 0]}
                 receiveShadow
               >
@@ -471,7 +526,7 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
                 }}
               >
                 <mesh
-                  position={[x, keycapCenterY, 0]}
+                  position={[x, keycapCenterY, z]}
                   geometry={keycapGeo}
                   castShadow
                   receiveShadow
@@ -503,7 +558,7 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
                 {kc.char && (
                   <Suspense fallback={null}>
                     <ExtrudedLetter
-                      position={[x, keycapTopY - LETTER_Y_INSET * 0.65, 0]}
+                      position={[x, keycapTopY - LETTER_Y_INSET * 0.65, z]}
                       fontUrl={fontUrl}
                       sizeScale={sizeScale}
                       char={kc.char}
@@ -516,7 +571,7 @@ export const ClickerModel = forwardRef<ClickerModelHandle, ClickerModelProps>(
               </group>
 
               {/* Exposed plunger travel area below the tray line */}
-              <mesh position={[x, FLOOR_H + buttonTravel / 2, 0]} castShadow receiveShadow>
+              <mesh position={[x, FLOOR_H + buttonTravel / 2, z]} castShadow receiveShadow>
                 <boxGeometry args={[KEYCAP_W * 0.7, buttonTravel, KEYCAP_D * 0.7]} />
                 <meshStandardMaterial
                   color={darken(kc.keycapColor, 0.16)}

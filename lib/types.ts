@@ -13,12 +13,16 @@ export type Keycap = {
   letterColor: string;
 };
 
+/** Key slots run along X (left→right) or along Z (top→bottom on the tray). */
+export type KeyLayout = "horizontal" | "vertical";
+
 export type Design = {
   keycaps: Keycap[];
   baseColor: string;
   font: FontId;
   defaultKeycapColor: string;
   defaultLetterColor: string;
+  keyLayout: KeyLayout;
 };
 
 export const MAX_KEYCAPS = 10;
@@ -35,6 +39,7 @@ export const DEFAULTS: Design = {
   font: "baloo2",
   defaultKeycapColor: "#ffffff",
   defaultLetterColor: "#2a2a2a",
+  keyLayout: "horizontal",
 };
 
 export function sanitizeChar(s: string): string {

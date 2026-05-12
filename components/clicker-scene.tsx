@@ -8,8 +8,14 @@ import {
 } from "@react-three/drei"
 import { Suspense, useEffect, useRef } from "react"
 import * as THREE from "three"
+import {
+  CLICKER_BASE_PAD,
+  CLICKER_BODY_CROSS_DEPTH,
+  CLICKER_KEYCAP_SPACING,
+  CLICKER_LANYARD_EXTRA,
+} from "@/lib/clicker-layout"
 import type { WaveRequest } from "@/lib/keycap-wave"
-import type { Design } from "@/lib/types"
+import type { Design, KeyLayout } from "@/lib/types"
 import { ClickerModel, type ClickerModelHandle } from "./clicker-model"
 
 export type ExportFn = () => string | null
@@ -155,24 +161,34 @@ export function ClickerScene({
         onBeforeExport={() => modelRef.current?.forceRest()}
       />
       <fog attach="fog" args={["#fafafa", 14, 30]} />
-      <CameraFit keycapCount={design.keycaps.length} />
+      <CameraFit keycapCount={design.keycaps.length} keyLayout={design.keyLayout} />
     </Canvas>
   )
 }
 
 // Widens vFOV on portrait/narrow viewports so the full model stays visible.
-function CameraFit({ keycapCount }: { keycapCount: number }) {
+function CameraFit({
+  keycapCount,
+  keyLayout,
+}: {
+  keycapCount: number
+  keyLayout: KeyLayout
+}) {
   const { camera, size } = useThree()
   useEffect(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return
     const aspect = size.width / size.height
-    // Model geometry constants (must match clicker-model.tsx)
-    const KEYCAP_SPACING = 0.98
-    const BASE_PAD = 0.22
-    const LANYARD_RING_R = 0.18
+    const LANYARD_RING_R = 0.23
     const n = keycapCount
-    const baseWidth = n * KEYCAP_SPACING + BASE_PAD * 2
-    const modelHalfWidth = baseWidth / 2 + LANYARD_RING_R * 0.75 + 0.28
+    const isVertical = keyLayout === "vertical"
+    const primarySpan = n * CLICKER_KEYCAP_SPACING + CLICKER_BASE_PAD * 2
+    const crossSpan = CLICKER_KEYCAP_SPACING + CLICKER_BASE_PAD * 2
+    const housingW = isVertical ? crossSpan : primarySpan
+    const housingD = isVertical ? primarySpan : CLICKER_BODY_CROSS_DEPTH
+    const lanyardStickout = LANYARD_RING_R * 0.75 + CLICKER_LANYARD_EXTRA
+    const modelHalfWidth = isVertical
+      ? Math.max(housingW / 2, housingD / 2 + lanyardStickout)
+      : Math.max(housingW / 2 + lanyardStickout, housingD / 2)
     const [camX, camY, camZ] = INITIAL_CAMERA_POSITION
     const camDepth = Math.sqrt(camX * camX + camY * camY + camZ * camZ)
     const minVFov =
@@ -181,6 +197,6 @@ function CameraFit({ keycapCount }: { keycapCount: number }) {
     // eslint-disable-next-line react-hooks/immutability
     camera.fov = Math.max(INITIAL_CAMERA_FOV, Math.min(80, minVFov))
     camera.updateProjectionMatrix()
-  }, [camera, size, keycapCount])
+  }, [camera, size, keycapCount, keyLayout])
   return null
 }
