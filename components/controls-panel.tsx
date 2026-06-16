@@ -1,7 +1,14 @@
 "use client"
 import { Download, Minus, Plus, RefreshCw, Shuffle } from "lucide-react"
 import type { Design, FontId, KeyLayout } from "@/lib/types"
-import { FONTS, MAX_KEYCAPS, MIN_KEYCAPS, sanitizeWord } from "@/lib/types"
+import {
+  FONTS,
+  MAX_KEYCAPS,
+  MAX_KEYCAP_COLORS,
+  MIN_KEYCAPS,
+  keycapColorsUsed,
+  sanitizeWord,
+} from "@/lib/types"
 import {
   BASE_PALETTE,
   KEYCAP_PALETTE,
@@ -55,6 +62,8 @@ export function ControlsPanel({
   onSaveImage: () => void
 }) {
   const n = design.keycaps.length
+  const colorsUsed = keycapColorsUsed(design.keycaps).size
+  const colorLimitReached = colorsUsed >= MAX_KEYCAP_COLORS
 
   return (
     <aside className="flex flex-col gap-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 lg:max-h-[80vh] lg:overflow-y-auto">
@@ -213,13 +222,27 @@ export function ControlsPanel({
       </Section>
 
       {/* Per-keycap list */}
-      <Section title={th.controls.perKeycap}>
+      <Section
+        title={th.controls.perKeycap}
+        subtitle={th.colorLimit.hint(MAX_KEYCAP_COLORS)}
+      >
+        <div
+          className={cn(
+            "mb-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium",
+            colorLimitReached
+              ? "bg-pink-50 text-pink-700"
+              : "bg-neutral-100 text-neutral-500",
+          )}
+        >
+          {th.colorLimit.used(colorsUsed, MAX_KEYCAP_COLORS)}
+        </div>
         <div className="flex flex-col gap-1">
           {design.keycaps.map((kc, i) => (
             <KeycapRow
               key={i}
               index={i}
               keycap={kc}
+              keycaps={design.keycaps}
               highlighted={highlightedIndex === i}
               onCharChange={(c) => onSetKeycapChar(i, c)}
               onKeycapColor={(c) => onSetKeycapColor(i, c)}

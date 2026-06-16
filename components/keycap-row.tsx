@@ -2,7 +2,7 @@
 import { RotateCcw } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { Keycap } from "@/lib/types";
-import { sanitizeChar } from "@/lib/types";
+import { MAX_KEYCAP_COLORS, keycapColorChangeAllowed, sanitizeChar } from "@/lib/types";
 import { KEYCAP_PALETTE, LETTER_PALETTE } from "@/lib/palette";
 import { th } from "@/lib/i18n/th";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { ColorPicker } from "./color-picker";
 export function KeycapRow({
   index,
   keycap,
+  keycaps,
   highlighted,
   onCharChange,
   onKeycapColor,
@@ -19,6 +20,8 @@ export function KeycapRow({
 }: {
   index: number;
   keycap: Keycap;
+  /** All keycaps in the design — used to enforce the keycap color limit. */
+  keycaps: Keycap[];
   highlighted: boolean;
   onCharChange: (c: string) => void;
   onKeycapColor: (c: string) => void;
@@ -26,6 +29,8 @@ export function KeycapRow({
   onReset: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const colorLimitNote = th.colorLimit.hint(MAX_KEYCAP_COLORS);
+  const colorLimitDisabledHint = th.colorLimit.swatchDisabled(MAX_KEYCAP_COLORS);
 
   useEffect(() => {
     if (highlighted && ref.current) {
@@ -63,6 +68,11 @@ export function KeycapRow({
           swatches={KEYCAP_PALETTE}
           label={th.controls.keycap}
           size="sm"
+          isColorEnabled={(hex) =>
+            keycapColorChangeAllowed(keycaps, index, "keycapColor", hex)
+          }
+          note={colorLimitNote}
+          disabledHint={colorLimitDisabledHint}
         />
         <ColorPicker
           value={keycap.letterColor}
@@ -70,6 +80,11 @@ export function KeycapRow({
           swatches={LETTER_PALETTE}
           label={th.controls.letter}
           size="sm"
+          isColorEnabled={(hex) =>
+            keycapColorChangeAllowed(keycaps, index, "letterColor", hex)
+          }
+          note={colorLimitNote}
+          disabledHint={colorLimitDisabledHint}
         />
       </div>
       <button
