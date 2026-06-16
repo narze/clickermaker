@@ -28,6 +28,44 @@ export type Design = {
 export const MAX_KEYCAPS = 10;
 export const MIN_KEYCAPS = 1;
 
+/** Max distinct colors allowed on the keycaps (surface + letter). Base color excluded. */
+export const MAX_KEYCAP_COLORS = 4;
+
+/**
+ * Distinct colors used across all keycaps — both surface and letter colors,
+ * compared case-insensitively. The base/tray color is intentionally excluded.
+ */
+export function keycapColorsUsed(keycaps: Keycap[]): Set<string> {
+  const set = new Set<string>();
+  for (const k of keycaps) {
+    set.add(k.keycapColor.toLowerCase());
+    set.add(k.letterColor.toLowerCase());
+  }
+  return set;
+}
+
+/** True when the keycaps use no more than `MAX_KEYCAP_COLORS` distinct colors. */
+export function withinKeycapColorLimit(keycaps: Keycap[]): boolean {
+  return keycapColorsUsed(keycaps).size <= MAX_KEYCAP_COLORS;
+}
+
+/**
+ * Whether setting keycap `index`'s `field` to `candidate` keeps the design
+ * within the keycap color limit. Used to enable/disable swatches in the picker.
+ */
+export function keycapColorChangeAllowed(
+  keycaps: Keycap[],
+  index: number,
+  field: "keycapColor" | "letterColor",
+  candidate: string,
+): boolean {
+  if (index < 0 || index >= keycaps.length) return false;
+  const next = keycaps.map((k, i) =>
+    i === index ? { ...k, [field]: candidate } : k,
+  );
+  return withinKeycapColorLimit(next);
+}
+
 export const DEFAULTS: Design = {
   keycaps: [
     { char: "N", keycapColor: "#ffffff", letterColor: "#2a2a2a" },

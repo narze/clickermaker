@@ -10,6 +10,7 @@ import {
   MIN_KEYCAPS,
   sanitizeChar,
   sanitizeWord,
+  withinKeycapColorLimit,
 } from "./types";
 import { decodeDesign, encodeDesign } from "./url-state";
 import { BASE_PALETTE, KEYCAP_PALETTE, LETTER_PALETTE } from "./palette";
@@ -39,13 +40,28 @@ function randomItem<T>(items: T[]): T {
 
 function makeKeycap(
   char: string,
+  existing: Keycap[],
   defaults: { defaultKeycapColor: string; defaultLetterColor: string },
 ): Keycap {
-  return {
-    char: sanitizeChar(char),
+  const sanitized = sanitizeChar(char);
+  const withDefaults: Keycap = {
+    char: sanitized,
     keycapColor: defaults.defaultKeycapColor,
     letterColor: defaults.defaultLetterColor,
   };
+  // Prefer the default colors, but if they'd push the design past the keycap
+  // color limit, reuse the previous keycap's colors so adding a keycap never
+  // introduces a new (over-limit) color.
+  if (withinKeycapColorLimit([...existing, withDefaults])) return withDefaults;
+  const prev = existing[existing.length - 1];
+  if (prev) {
+    return {
+      char: sanitized,
+      keycapColor: prev.keycapColor,
+      letterColor: prev.letterColor,
+    };
+  }
+  return withDefaults;
 }
 
 function reducer(state: Design, action: Action): Design {
@@ -58,7 +74,7 @@ function reducer(state: Design, action: Action): Design {
         const prev = state.keycaps[i];
         const ch = w[i] ?? "";
         if (prev) next.push({ ...prev, char: sanitizeChar(ch) });
-        else next.push(makeKeycap(ch, state));
+        else next.push(makeKeycap(ch, next, state));
       }
       return { ...state, keycaps: next };
     }
@@ -72,12 +88,16 @@ function reducer(state: Design, action: Action): Design {
       if (action.index < 0 || action.index >= state.keycaps.length) return state;
       const next = state.keycaps.slice();
       next[action.index] = { ...next[action.index], keycapColor: normalizeHex(action.color) };
+      // Reject changes that would exceed the keycap color limit.
+      if (!withinKeycapColorLimit(next)) return state;
       return { ...state, keycaps: next };
     }
     case "setLetterColor": {
       if (action.index < 0 || action.index >= state.keycaps.length) return state;
       const next = state.keycaps.slice();
       next[action.index] = { ...next[action.index], letterColor: normalizeHex(action.color) };
+      // Reject changes that would exceed the keycap color limit.
+      if (!withinKeycapColorLimit(next)) return state;
       return { ...state, keycaps: next };
     }
     case "resetKeycap": {
@@ -88,13 +108,15 @@ function reducer(state: Design, action: Action): Design {
         keycapColor: state.defaultKeycapColor,
         letterColor: state.defaultLetterColor,
       };
+      // Reject if resetting to the default colors would exceed the limit.
+      if (!withinKeycapColorLimit(next)) return state;
       return { ...state, keycaps: next };
     }
     case "addKeycap": {
       if (state.keycaps.length >= MAX_KEYCAPS) return state;
       return {
         ...state,
-        keycaps: [...state.keycaps, makeKeycap("", state)],
+        keycaps: [...state.keycaps, makeKeycap("", state.keycaps, state)],
       };
     }
     case "removeKeycap": {

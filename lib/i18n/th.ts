@@ -48,6 +48,12 @@ export const th = {
   colorPicker: {
     colorValue: (value: string) => `สี ${value}`,
   },
+  colorLimit: {
+    hint: (max: number) => `เลือกสีบนปุ่มได้สูงสุด ${max} สี (ไม่นับสีฐาน)`,
+    used: (used: number, max: number) => `ใช้สีไปแล้ว ${used}/${max} สี`,
+    swatchDisabled: (max: number) =>
+      `เลือกสีนี้ไม่ได้ เพราะจะเกิน ${max} สีบนปุ่ม`,
+  },
   palette: {
     pastelPink: "ชมพูพาสเทล",
     yellow: "เหลือง",
